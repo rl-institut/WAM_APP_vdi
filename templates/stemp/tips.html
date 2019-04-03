@@ -1,0 +1,15 @@
+
+{% extends 'stemp/base.html' %}
+
+{% block body-class %}u-vh--100{% endblock %}
+
+{% block content %}
+<div class="grid-x">
+  <div class="cell">
+    {{tipps}}
+  </div>
+  <div class="cell">
+    <a class="btn btn-cta btn-submit" href="{% url 'stemp:result' %}">Zurück zu den Ergebnissen</a>
+  </div>
+</div>
+{% endblock %}

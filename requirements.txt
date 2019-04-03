@@ -1,0 +1,17 @@
+docopt
+shapely
+feedinlib
+scipy
+configobj
+requests
+pathos
+psycopg2-binary
+sqlalchemy
+sqlahelper
+geoalchemy2
+celery
+Jinja2
+cursive_re
+click
+-e git://github.com/henhuy/oemof.git@oemof_kopy#egg=oemof
+-e git://github.com/oemof/demandlib#egg=demandlib

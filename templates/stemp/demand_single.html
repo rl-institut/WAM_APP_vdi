@@ -1,0 +1,120 @@
+{% extends "stemp/base_side.html" %}
+
+{% load staticfiles %}
+{% load labels %}
+{% load crispy_forms_tags %}
+
+{% block body-class %}u-vh--100{% endblock %}
+
+{% block left_side %}
+
+<div class="cell"><h1>{{demand_label}}</h1></div>
+
+{{wizard}}
+
+<div class="scen-create__description">
+  <div class="scen-create__icon"><img src="{% static 'stemp/img/icons_custom/Enavi_Einzelhaus.svg' %}" alt="Icon Einzelhaus"></div>
+  <h2 class="scen-create__header">{% if is_district_hh %}{% label 'demand_single:District:title' %}{% else %}{% label 'demand_single:Single:title' %}{% endif %}</h2>
+  <p class="scen-create__text show-for-large">{% if is_district_hh %}{% label 'demand_single:District:text' %}{% else %}{% label 'demand_single:Single:text' %}{% endif %}</p>
+</div>
+
+{% endblock %}
+
+{% block right_side %}
+
+<div id="layout-grid-y" class="cell large-8 large-cell-block-y">
+  <div class="grid-y">
+    <div id="layout-block" class="cell">
+      <main class="cell medium-10 main-content-wrap">
+        <div class="grid-x align-center" id="tabs">
+          <div class="cell scen-create__form u-text--center">
+            <h3>Mein Haushalt</h3>
+          </div>
+
+          <div class="cell medium-10 large-8 tabs-btn">
+            <ul>
+              <li>
+                <a href="#tabs-1">
+                  <button type="button" class="button tabs-btn--left active" id="quarterCustomBtn">Benutzerdefiniert</button>
+                </a>
+              </li>
+              <li>
+                <a href="#tabs-2">
+                  <button type="button" class="button tabs-btn--right not-active" id="quarterListBtn">Aus Liste</button>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <!-- QUESTIONS START -->
+          <div class="cell reveal-house__questions scen-padding-btm hh-component" id="tabs-1">
+            <form method="post" id="household_form" class="reveal-house__questions-form">
+              {% csrf_token %}
+              {% crispy household_form %}
+              <input type="hidden" value="house" name="form">
+            </form>
+          </div>
+          <!-- QUESTIONS END -->
+
+          <!-- LIST START -->
+          <div class="cell medium-10 medium-offset-1 large-8 large-offset-2 reveal-house__list" id="tabs-2">
+            <div class="grid-x">
+              <form method="post" id="list" class="reveal-house__list-form">
+                {% csrf_token %}
+                {% crispy list_form %}
+                <input type="hidden" value="list" name="form">
+              </form>
+            </div>
+          </div>
+          <!-- LIST END -->
+
+        </div>
+      </main>
+    </div>
+    <!-- FORM END -->
+
+    {% if is_district_hh %}
+      {% url 'stemp:demand_district' as back_url%}
+      {% include 'includes/button_section.html' with back_url=back_url done_label='Hinzufügen' done_class='btn btn-apply btn-apply--secondary' done_icon='icon ion-android-add icon--small' done_function='done();' %}
+    {% else %}
+      {% url 'stemp:demand_selection' as back_url%}
+      {% include 'includes/button_section.html' with back_url=back_url done_function='done();' %}
+    {% endif %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+  <script language="JavaScript">
+  $( function() {
+    $( "#tabs" ).tabs();
+  } );
+
+  $('#quarterCustomBtn').click(function() {
+    if ($('#quarterListBtn').hasClass('active')) {
+      $('#quarterCustomBtn').addClass('active');
+      $('#quarterListBtn').removeClass('active');
+    }
+  });
+
+  $('#quarterListBtn').click(function() {
+    if ($('#quarterCustomBtn').hasClass('active')) {
+      $('#quarterListBtn').addClass('active');
+      $('#quarterCustomBtn').removeClass('active');
+    }
+  });
+
+  function done() {
+    if ($("#tabs-1").attr("aria-hidden") == "true") {
+      $("#list").submit();
+    } else {
+      $("#household_form").submit();
+    }
+  };
+  </script>
+  {{household_form.media}}
+  <script src="{% static 'highcharts/code/highcharts.js' %}"></script>
+  <script>{{household_form.hotwater_hc.media}}</script>
+  {{list_form.media}}
+{% endblock %}

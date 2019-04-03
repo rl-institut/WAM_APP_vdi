@@ -1,0 +1,62 @@
+{% extends "stemp/base_side.html" %}
+
+{% load staticfiles %}
+{% load labels %}
+{% load crispy_forms_tags %}
+
+{% block body-class %}u-vh--100{% endblock %}
+
+{% block left_side %}
+
+<div class="cell"><h1>{{demand_label}}</h1></div>
+
+{{wizard}}
+
+<div class="scen-create__description">
+  <div class="scen-create__icon"><img src="{% static 'stemp/img/icons_custom/Enavi_Parameter.svg' %}" alt="Icon Parameter"></div>
+  <h2 class="scen-create__header">Parameter</h2>
+  <p class="scen-create__text show-for-large">Optional können Sie auch Kosten- sowie Technologieparameter einzeln ändern.</p>
+</div>
+
+{% endblock %}
+
+{% block right_side %}
+
+<div class="cell large-8 large-cell-block-y">
+  <div id="layout-grid-y" class="grid-y">
+    <div id="layout-block" class="cell">
+
+      <main class="cell medium-10 main-content-wrap">
+        <div class="grid-x align-center">
+          <div class="cell scen-create__form u-text--center">
+            <h3>{{demand_name}}</h3>
+          </div>
+
+          <div class="panel">
+            {% label 'parameter:note' safe=True %}
+          </div>
+          <div class="cell">
+            <form class="cell medium-10 large-8 scen-padding-btm" id="parameter_form" action="{% url 'stemp:parameter' %}" method="post">
+              {% csrf_token %}
+              {% crispy parameter_form %}
+              <input type="hidden" name="scenario" value="{{scenario}}">
+            </form>
+          </div>
+        </div>
+      </main>
+    </div>
+    {% url 'stemp:technology' as back_url%}
+    {% include 'includes/button_section.html' with back_url=back_url done_function="done();" %}
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+  <script src="{% static 'jquery.js' %}"></script>
+  <script language="JavaScript">
+    function done() {
+      $("#parameter_form").submit();
+    };
+  </script>
+{% endblock %}

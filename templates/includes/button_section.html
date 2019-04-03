@@ -1,0 +1,36 @@
+<!-- BUTTONS SECTION START -->
+<div id="layout-footer" class="cell">
+  <div class="cell medium-2 footer footer-btns">
+    <div class="grid-x">
+      <div class="cell footer-btns__left small-6">
+        <a href={{back_url}} class="btn btn--hollow btn--small">
+          <i class ="icon ion-chevron-left icon--small"></i>
+          Zurück
+        </a>
+      </div>
+      <div class="cell footer-btns__right small-6">
+        <button type="submit" class="{{done_class|default:'btn btn-cta btn-submit'}}" name="done" onclick="{{done_function}}">
+          {{done_label|default:"Weiter"}}
+          {% if done_icon != '' %}<i class="{{done_icon|default:'icon ion-chevron-right icon--small'}}"></i>{% endif %}
+        </button>
+      </div>
+    </div>
+
+    <div class="cell u-text--center">
+      <a href="{% url 'stemp:index' %}">
+        <span class="anchor-text">
+        <i class ="icon ion-close icon--small"></i>
+        Abbrechen
+        </span>
+      </a>
+    </div>
+
+    <div class="cell hide-for-large">
+      <div class="cell show-for-small hide-for-large footer-legal footer-legal--mobile">
+        {% include 'includes/footer_small.html' %}
+      </div>
+    </div>
+
+  </div>
+</div>
+<!-- BUTTONS SECTION END -->

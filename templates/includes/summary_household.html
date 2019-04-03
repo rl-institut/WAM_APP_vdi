@@ -1,0 +1,44 @@
+
+{% load staticfiles %}
+
+<div class="grid-x">
+  <div class="cell small-3 medium-2">
+    <div class="house__content-icon-frame --people">
+      <img src="{% static 'stemp/img/icons_custom/mv_icon_people.svg' %}" alt="" class="house__content-icon">
+    </div>
+  </div>
+  <div class="cell small-9 medium-10 house__content-text">
+    <p><b>{{household.number_of_persons}} </b> Person{% if household.number_of_persons > 1 %}en{% endif %}</p>
+  </div>
+  <div class="cell small-3 medium-2">
+    <div class="house__content-icon-frame --roof">
+      <img src="{% static 'stemp/img/icons_custom/mv_icon_roof_area.svg' %}" alt="" class="house__content-icon">
+    </div>
+  </div>
+  <div class="cell small-9 medium-10 house__content-text">
+    <p>Verfügbare Dachfläche für Photovoltaik: <b> {{household.roof_area|floatformat}} qm</b></p>
+  </div>
+  <div class="cell small-3 medium-2">
+    <div class="house__content-icon-frame --heater">
+      <img src="{% static 'stemp/img/icons_custom/mv_icon_heater.svg' %}" alt="" class="house__content-icon">
+    </div>
+  </div>
+  <div class="cell small-9 medium-10 house__content-text">
+    <p>Jährlicher Energiebedarf (Heizung): <b> {{household.heat_demand|floatformat:"0"}} kW/h</b></p>
+  </div>
+  <div class="cell small-3 medium-2">
+    <div class="house__content-icon-frame --hot-water">
+      <img src="{% static 'stemp/img/icons_custom/mv_icon_hot_water.svg' %}" alt="" class="house__content-icon">
+    </div>
+  </div>
+  <div class="cell small-9 medium-10 house__content-text">
+    <p>Jährlicher Energiebedarf (Warmwasser): <b> {{household.warm_water_demand|floatformat:"0"}} kW/h</b></p>
+  </div>
+  {% if deletable %}
+  <div class="cell house__content-delete">
+    <button class="u-inline-block delete-btn" type="submit" name="trash" value="{{household.id}}">
+      <i class="icon ion-android-delete icon--small"></i> Löschen
+    </button>
+  </div>
+  {% endif %}
+</div>

@@ -1,0 +1,75 @@
+{% extends "stemp/base_side.html" %}
+
+{% load staticfiles %}
+{% load labels %}
+
+{% block body-class %}u-vh--100{% endblock %}
+
+{% block left_side %}
+
+<div class="cell"><h1>{{demand_label}}</h1></div>
+
+{{wizard}}
+
+<div class="scen-create__description">
+  <div class="scen-create__icon"><img src="{% static 'stemp/img/icons_custom/Heizung.svg' %}" alt="Icon Heizung"></div>
+  <h2 class="scen-create__header">{% label 'technology:title' %}</h2>
+  <p class="scen-create__text show-for-large">{% label 'technology:text' %}</p>
+</div>
+
+{% endblock %}
+
+{% block right_side %}
+
+<div class="cell large-8 large-cell-block-y">
+  <div id="layout-grid-y" class="grid-y">
+    <div id="layout-block" class="cell">
+
+      <main class="cell medium-10 main-content-wrap">
+
+        <form class="grid-x align-center" action="{% url 'stemp:technology' %}" method="post" id="technology_form">
+          {% csrf_token %}
+          <div class="cell scen-create__form u-text--center">
+            <h3>{{demand_name}}</h3>
+          </div>
+
+          <div class="cell checkbox-wrap">
+            <div class="grid-x">
+              <div class="cell small-9 medium-4 medium-offset-4 u-text--left checkbox-wrap__header">
+                <div>
+                  Technologien
+                </div>
+              </div>
+              <div class="cell small-3 medium-2 checkbox-wrap__header">
+                Informationen
+              </div>
+            </div>
+          </div>
+
+          {% for field in technology %}
+            {{field}}
+          {% endfor %}
+
+        </form>
+      </main>
+    </div>
+
+    {% if demand_type == 'single' %}
+          {% url 'stemp:demand_single' as back_url %}
+        {% else %}
+          {% url 'stemp:demand_district' as back_url %}
+        {% endif %}
+    {% include 'includes/button_section.html' with back_url=back_url done_function="done();" %}
+
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+  <script>
+  function done() {
+    $("#technology_form").submit();
+  };
+  </script>
+{% endblock %}
