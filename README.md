@@ -1,2 +1,2 @@
-# WAM_APP_vdi
-Analyze the economic feasibility of batteries in companies (with peak shaving)
+# WAM_APP_stemp_abw
+StEmp-Tool für Anhalt-Bitterfeld-Wittenberg

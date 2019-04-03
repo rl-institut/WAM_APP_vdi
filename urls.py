@@ -1,147 +1,122 @@
+from collections import namedtuple
 
-import cursive_re
+from django.urls import path, re_path
+from djgeojson.views import GeoJSONLayerView
+from django.views.decorators.cache import cache_page
+from stemp_abw.app_settings import MAP_DATA_CACHE_TIMEOUT
 
-from django.urls import path, register_converter
-
-from wam.admin import wam_admin_site
-from meta import models
+from . import views
+import inspect
+from meta.models import Source
 from meta.views import AppListView, AssumptionsView
-from stemp import constants
-from stemp import views
-from stemp import views_dynamic
-from stemp import views_admin
 
+app_name = 'stemp_abw'
 
-def get_list_regex():
-    number = cursive_re.one_or_more(
-        cursive_re.any_of(cursive_re.in_range('0', '9')))
-    regex = cursive_re.alternative(
-        number +
-        cursive_re.zero_or_more(cursive_re.text(',') + number)
-    )
-    return str(regex)
-
-
-class ListConverter:
-    regex = get_list_regex()
-
-    @staticmethod
-    def to_python(value):
-        return [int(v) for v in value.split(',')]
-
-    @staticmethod
-    def to_url(value):
-        return ','.join(map(str, value))
-
-
-register_converter(ListConverter, 'list')
-
-
-app_name = 'stemp'
-
+# regular URLs
 urlpatterns = [
-    path('', views.IndexView.as_view(), name='index'),
-    path('contact/', views.ContactView.as_view(), name='contact'),
-    path('privacy/', views.PrivacyView.as_view(), name='privacy'),
-    path('impressum/', views.ImpressumView.as_view(), name='impressum'),
-    path('sources/', AppListView.as_view(
-        model=models.Source, app_name='stemp'), name='sources'),
-    path('assumptions/', AssumptionsView.as_view(
-        app_name='stemp'), name='assumptions'),
-    path(
-        'demand_selection/',
-        views.DemandSelectionView.as_view(),
-        name='demand_selection'
-    ),
-    path(
-        'demand/single/',
-        views.DemandSingleView.as_view(),
-        name='demand_single'
-    ),
-    path(
-        'demand/district/household/',
-        views.DemandSingleView.as_view(is_district_hh=True),
-        name='demand_district_household'
-    ),
-    path(
-        'demand/district/household/mfh',
-        views.DemandSingleView.as_view(
-            is_district_hh=True,
-            only_house_type=constants.HouseType.MFH),
-        name='demand_district_household_mfh'
-    ),
-    path(
-        'demand/district/household/efh',
-        views.DemandSingleView.as_view(
-            is_district_hh=True,
-            only_house_type=constants.HouseType.EFH),
-        name='demand_district_household_efh'
-    ),
-    path(
-        'demand/district/empty',
-        views.DemandDistrictView.as_view(),
-        name='demand_district_empty',
-    ),
-    path(
-        'demand/district/',
-        views.DemandDistrictView.as_view(new_district=False),
-        name='demand_district',
-    ),
-    path('technology/', views.TechnologyView.as_view(), name='technology'),
-    path('parameter/', views.ParameterView.as_view(), name='parameter'),
-    path('summary/', views.SummaryView.as_view(), name='summary'),
-    path('result/', views.ResultView.as_view(), name='result'),
-    path('pending/', views.PendingView.as_view(), name='pending'),
-    path(
-        'result/<list:results>',
-        views.ResultView.as_view(),
-        name='result_list'
-    ),
-    path(
-        'addresses/',
-        views.AdressesView.as_view(),
-        name='addresses'
-    ),
-    path(
-        'tips/',
-        views.TipsView.as_view(),
-        name='tips'
-    ),
-    path(
-        'ajax/get_next_household_name/',
-        views_dynamic.get_next_household_name,
-        name='household_name'
-    ),
-    path(
-        'ajax/get_heat_demand/',
-        views_dynamic.get_heat_demand,
-    ),
-    path(
-        'ajax/get_square_meters/',
-        views_dynamic.get_square_meters,
-    ),
-    path(
-        'ajax/get_warm_water_energy/',
-        views_dynamic.get_warm_water_energy,
-    ),
-    path(
-        'ajax/get_roof_area/',
-        views_dynamic.get_roof_area,
-    ),
-    path(
-        'ajax/check_pending/',
-        views_dynamic.check_pending,
-    ),
-    path(
-        'ajax/get_household_summary/',
-        views_dynamic.get_household_summary,
-    ),
-]
+    path('', views.IndexView.as_view(),
+         name='index'),
+    path('app/', views.MapView.as_view(),
+         name='map'),
+    path('imprint/', views.ImprintView.as_view(),
+         name='imprint'),
+    path('privacy_policy/', views.PrivacyPolicyView.as_view(),
+         name='privacy_policy'),
+    path('sources_old/', views.SourcesView.as_view(),
+         name='sources_old'),
+    # Source views from WAM with highlighting
+    path('sources/', AppListView.as_view(app_name='stemp_abw',
+                                         model=Source),
+         name='sources'),
+    path('assumptions/', AssumptionsView.as_view(app_name='stemp_abw'),
+         name='assumptions'),
+    ]
 
-admin_url_patterns = [
-    path(
-        'stemp/manage',
-        wam_admin_site.admin_view(views_admin.ManageView.as_view()),
-        name='manage_stemp'
-    ),
-]
+# search detail views classes and append to URLs
+detail_views = {}
+for name, obj in inspect.getmembers(views.detail_views):
+    if inspect.isclass(obj):
+        if issubclass(obj, views.detail_views.MasterDetailView):
+            if obj.model is not None:
+                detail_views[obj.model.name] = obj
+urlpatterns.extend(
+    path('popup/{}/<int:pk>/'.format(name), dview.as_view(),
+         name='{}-detail'.format(name))
+    for name, dview in detail_views.items()
+)
+
+# Test JS template view
+# TODO: Generalize like above!
+urlpatterns.extend(
+    [
+        path(
+            'popupjs/reg_mun_pop/<int:pk>/',
+            views.RegMunPopDetailJsView.as_view(),
+            name='reg_mun_pop_popupjs'
+        ),
+        path(
+            'popupjs/reg_mun_energy_re_el_dem_share/<int:pk>/',
+            views.RegMunEnergyReElDemShareDetailJsView.as_view(),
+            name='reg_mun_energy_re_el_dem_share_popupjs'
+        ),
+        path(
+            'popupjs/reg_mun_gen_energy_re/<int:pk>/',
+            views.RegMunGenEnergyReDetailJsView.as_view(),
+            name='reg_mun_gen_energy_re_popupjs'
+        ),
+        path(
+            'popupjs/reg_mun_gen_energy_re_per_capita/<int:pk>/',
+            views.RegMunGenEnergyRePerCapitaDetailJsView.as_view(),
+            name='reg_mun_gen_energy_re_per_capita_popupjs'
+        ),
+        path(
+            'popupjs/reg_mun_gen_energy_re_density/<int:pk>/',
+            views.RegMunGenEnergyReDensityDetailJsView.as_view(),
+            name='reg_mun_gen_energy_re_density_popupjs'
+        ),
+        path(
+            'popupjs/reg_mun_gen_cap_re/<int:pk>/',
+            views.RegMunGenCapReDetailJsView.as_view(),
+            name='reg_mun_gen_cap_re_popupjs'
+        ),
+        path(
+            'popupjs/reg_mun_gen_cap_re_density/<int:pk>/',
+            views.RegMunGenCapReDensityDetailJsView.as_view(),
+            name='reg_mun_gen_cap_re_density_popupjs'
+        ),
+        path(
+            'popupjs/reg_mun_dem_el_energy/<int:pk>/',
+            views.RegMunDemElEnergyDetailJsView.as_view(),
+            name='reg_mun_dem_el_energy_popupjs'
+        ),
+        path(
+            'popupjs/reg_mun_dem_el_energy_per_capita/<int:pk>/',
+            views.RegMunDemElEnergyPerCapitaDetailJsView.as_view(),
+            name='reg_mun_dem_el_energy_per_capita_popupjs'
+        ),
+        path(
+            'popupjs/reg_mun_dem_th_energy/<int:pk>/',
+            views.RegMunDemThEnergyDetailJsView.as_view(),
+            name='reg_mun_dem_th_energy_popupjs'
+        ),
+        path(
+            'popupjs/reg_mun_dem_th_energy_per_capita/<int:pk>/',
+            views.RegMunDemThEnergyPerCapitaDetailJsView.as_view(),
+            name='reg_mun_dem_th_energy_per_capita_popupjs'
+        )
+    ]
+)
+
+# search JSON data views classes and append to URLs
+data_views = {}
+for name, obj in inspect.getmembers(views.serial_views):
+    if inspect.isclass(obj):
+        if issubclass(obj, GeoJSONLayerView):
+            if obj.model is not None:
+                data_views[obj.model.name] = obj
+urlpatterns.extend(
+    re_path(r'^{}.data/'.format(name),
+            cache_page(MAP_DATA_CACHE_TIMEOUT)(sview.as_view()),
+            name='{}.data'.format(name))
+    for name, sview in data_views.items()
+)

@@ -1,17 +1,17 @@
-docopt
+leaflet
 shapely
-feedinlib
-scipy
+pandas
+numpy
 configobj
 requests
-pathos
-psycopg2-binary
+psycopg2
 sqlalchemy
-sqlahelper
 geoalchemy2
-celery
-Jinja2
-cursive_re
-click
--e git://github.com/henhuy/oemof.git@oemof_kopy#egg=oemof
--e git://github.com/oemof/demandlib#egg=demandlib
+sqlahelper
+oedialect
+django
+django-postgresql
+django-leaflet
+django-geojson
+pathos
+oemof

@@ -1,88 +1,116 @@
-
 import os
+from collections import OrderedDict
 import sqlalchemy
 import sqlahelper
 from configobj import ConfigObj
-from importlib import import_module
 
 import oedialect as _
 
 from wam import settings
-from db_apps import oemof_results
-from stemp import oep_models
+#from db_apps import oemof_results
+from stemp_abw import oep_models
 
-ADDITIONAL_PARAMETERS = ConfigObj(
-    os.path.join(settings.BASE_DIR, 'stemp', 'scenarios', 'attributes.cfg'))
+# SCENARIO_PATH = os.path.join('stemp', 'scenarios')
 
-LABELS = ConfigObj(os.path.join(settings.BASE_DIR, 'stemp', 'labels.cfg'))
-ENERGY_TIPS = ConfigObj(
-    os.path.join(settings.BASE_DIR, 'stemp', 'texts', 'energy_tips.cfg'))
+# ADDITIONAL_PARAMETERS = ConfigObj(
+#     os.path.join(settings.BASE_DIR, 'stemp', 'attributes.cfg'))
 
-stemp_config = settings.config['STEMP']
 
-STORE_LP_FILE = stemp_config.get('STORE_LP_FILE', 'False') == 'True'
-DEFAULT_PERIODS = int(stemp_config.get('DEFAULT_PERIODS', 8760))
-
-# DB SETUP:
 DB_URL = '{ENGINE}://{USER}:{PASSWORD}@{HOST}:{PORT}'
 
 
-def add_engine(engine_name):
-    db_name = stemp_config.get(engine_name, DB_DEFAULT_SETUP[engine_name])
+def build_db_url(db_name):
     conf = settings.config['DATABASES'][db_name]
+    #conf['ENGINE'] = 'postgresql+oedialect'
     db_url = DB_URL + '/{NAME}' if 'NAME' in conf else DB_URL
-    engine = sqlalchemy.create_engine(db_url.format(**conf))
-    sqlahelper.add_engine(engine, engine_name)
+    return db_url.format(**conf)
 
 
-DB_DEFAULT_SETUP = {
-    'DB_RESULTS': 'DEFAULT',
-    'DB_SCENARIOS': 'OEP',
-    'DB_INTERNAL': 'reiners_db'
-}
+# # Add sqlalchemy for oemof_results:
+# engine = sqlalchemy.create_engine(build_db_url('DEFAULT'))
+# sqlahelper.add_engine(engine, 'oemof_results')
+# oemof_results.Base.metadata.bind = engine
 
-for setup in DB_DEFAULT_SETUP:
-    add_engine(setup)
+# # Add local DB:
+# engine = sqlalchemy.create_engine(build_db_url('DEFAULT'))
+# sqlahelper.add_engine(engine, 'lokal')
+# oep_models.Base.metadata.bind = engine
 
-# Add sqlalchemy for oemof_results:
-oemof_results.Base.metadata.bind = sqlahelper.get_engine('DB_RESULTS')
+# # Add OEP:
+# engine = sqlalchemy.create_engine(build_db_url('OEP'))
+# sqlahelper.add_engine(engine, 'oep')
+# oep_models.Base.metadata.bind = engine
 
-# Add OEP:
-oep_models.Base.metadata.bind = sqlahelper.get_engine('DB_SCENARIOS')
+# # Add reiner:
+# engine = sqlalchemy.create_engine(build_db_url('reiners_db'))
+# sqlahelper.add_engine(engine, 'reiners_db')
 
-# SCENARIO SETUP:
-ACTIVATED_SCENARIOS = stemp_config.get('ACTIVATED_SCENARIOS', [])
-SCENARIO_PATH = os.path.join('stemp', 'scenarios')
+# TODO: Verify configs after import / make failsafe!
+LAYER_AREAS_METADATA = ConfigObj(os.path.join(settings.BASE_DIR,
+                                              'stemp_abw',
+                                              'config',
+                                              'layers_areas.cfg'))
 
+LAYER_REGION_METADATA = ConfigObj(os.path.join(settings.BASE_DIR,
+                                               'stemp_abw',
+                                               'config',
+                                               'layers_region.cfg'))
 
-def import_scenario(scenario):
-    filename = os.path.join(SCENARIO_PATH, scenario)
-    splitted = filename.split(os.path.sep)
-    module_name = '.'.join(splitted[1:])
-    return import_module('.' + module_name, package=splitted[0])
+LAYER_DEFAULT_STYLES = ConfigObj(os.path.join(settings.BASE_DIR,
+                                              'stemp_abw',
+                                              'config',
+                                              'layer_default_styles.cfg'))
 
+ESYS_COMPONENTS_METADATA = ConfigObj(os.path.join(settings.BASE_DIR,
+                                                  'stemp_abw',
+                                                  'config',
+                                                  'esys_components.cfg'))
 
-class ScenarioModules(object):
-    def __init__(self):
-        self.modules = {}
+ESYS_AREAS_METADATA = ConfigObj(os.path.join(settings.BASE_DIR,
+                                             'stemp_abw',
+                                             'config',
+                                             'esys_areas.cfg'))
 
-    def __getitem__(self, module_name):
-        if module_name in self.modules:
-            return self.modules[module_name]
-        else:
-            module = import_scenario(module_name)
-            self.modules[module_name] = module
-            return module
+LABELS = ConfigObj(os.path.join(settings.BASE_DIR,
+                                'stemp_abw',
+                                'config',
+                                'labels.cfg'))
 
+MAP_DATA_CACHE_TIMEOUT = 60 * 60
 
-SCENARIO_MODULES = ScenarioModules()
-SCENARIO_PARAMETERS = {
-    scenario: ConfigObj(
-        os.path.join(
-            settings.BASE_DIR,
-            SCENARIO_PATH,
-            f'{scenario}.cfg'
-        )
-    )
-    for scenario in ACTIVATED_SCENARIOS
-}
+# Mapping between UI control id and data in scenario data dict.
+# The value can be string or list of strings. If a list is provided, the
+# control value is calculated using the sum of scenario's data values
+CONTROL_VALUES_MAP = {'sl_wind': 'gen_capacity_wind',
+                      'sl_pv_roof':
+                          ['gen_capacity_pv_roof_large',
+                           'gen_capacity_pv_roof_small'],
+                      'sl_pv_ground': 'gen_capacity_pv_ground',
+                      'sl_bio': 'gen_capacity_bio',
+                      'sl_conventional':
+                          ['gen_capacity_combined_cycle',
+                           'gen_capacity_steam_turbine',
+                           'gen_capacity_sewage_landfill_gas'],
+                      'sl_resid_save_el': 'resid_save_el',
+                      'sl_crt_save_el': 'crt_save_el',
+                      'sl_resid_pth': 'resid_pth',
+                      'sl_crt_pth': 'crt_pth',
+                      'sl_resid_save_th': 'resid_save_th',
+                      'sl_crt_save_th': 'crt_save_th',
+                      'sl_battery': 'battery',
+                      'sl_dsm_resid': 'dsm_resid',
+                      'sl_emobility': 'emobility',
+                      'sl_dist_resid': 'dist_resid',
+                      'cb_use_forest': 'use_forest',
+                      'cb_use_ffh_areas': 'use_ffh_areas',
+                      'cb_use_cult_areas': 'use_cult_areas',
+                      'dd_repowering': 'repowering_scn'
+                      }
+
+SIMULATION_CFG = {'date_from': '2017-01-01 00:00:00',
+                  'date_to': '2017-01-07 23:00:00',
+                  'freq': '60min',
+                  'solver': 'cbc',
+                  'verbose': True,
+                  'keepfiles': False
+                  }
