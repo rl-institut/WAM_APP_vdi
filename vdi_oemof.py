@@ -29,7 +29,7 @@ The following energy system is modeled:
 
 Data
 ----
-basic_example.csv
+input_vdi_oemof.csv
 
 
 Installation requirements
@@ -88,7 +88,7 @@ date_time_index = pd.date_range('1/1/2012', periods=number_of_time_steps,
 energysystem = solph.EnergySystem(timeindex=date_time_index)
 
 # Read data file
-filename = os.path.join(os.path.dirname(__file__), 'basic_example.csv')
+filename = os.path.join(os.path.dirname(__file__), 'input_vdi_oemof.csv')
 data = pd.read_csv(filename)
 
 ##########################################################################
@@ -218,7 +218,7 @@ model = solph.Model(energysystem)
 # the lp-file.
 if debug:
     filename = os.path.join(
-        helpers.extend_basic_path('lp_files'), 'basic_example.lp')
+        helpers.extend_basic_path('lp_files'), 'vdi_oemof.lp')
     logging.info('Store lp-file in {0}.'.format(filename))
     model.write(filename, io_options={'symbolic_solver_labels': True})
 
