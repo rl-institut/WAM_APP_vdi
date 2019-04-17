@@ -1,2 +1,2 @@
-# WAM_APP_stemp_abw
-StEmp-Tool für Anhalt-Bitterfeld-Wittenberg
+# WAM_APP_vdi_sp
+First development of the Oemof model for the WAM VDI-app
