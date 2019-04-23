@@ -84,6 +84,20 @@ data = pd.read_csv(filename)
 # Create oemof object
 ##########################################################################
 
+logging.info('Create oemof objects')
+
+# The bus objects were assigned to variables which makes it easier to connect
+# components to these buses (see below).
+
+# create natural gas bus
+bgas = solph.Bus(label="natural_gas")
+
+# create electricity bus
+bus_elec = solph.Bus(label="electricity")
+
+# adding the buses to the energy system
+energysystem.add(bgas, bus_elec)
+
 netz = solph.Source(label='netz',
                     outputs={bus_elec:
                              solph.Flow(
@@ -122,37 +136,21 @@ storage = solph.components.GenericStorage(
                 outflow_conversion_factor=0.8,
                 capacity_loss=0.003) # Discharge Rate, hängt nur von Zeitl ab
 
-
 # can be modified: Input = output in costs from flow
-solph.constraints.equate_variables(
-    model,
-    model.InvestmentFlow.invest[bus_elec, storage],
-    model.InvestmentFlow.invest[storage, bus_elec])
+#solph.constraints.equate_variables(
+#    model,
+#    model.InvestmentFlow.invest[bus_elec, storage],
+#    model.InvestmentFlow.invest[storage, bus_elec])
 
 #e/p = 0.5
-pwr = es.groups['el_storage']
-el = es.groups['elec']
+#pwr = es.groups['el_storage']
+#el = es.groups['elec']
 
-solph.constraints.equate_variables(
-    model,
-    model.GenericInvestmentStorageBlock.invest[pwr],
-    model.InvestmentFlow.invest[el, pwr],
-    factor1=0.5)
-
-
-logging.info('Create oemof objects')
-
-# The bus objects were assigned to variables which makes it easier to connect
-# components to these buses (see below).
-
-# create natural gas bus
-bgas = solph.Bus(label="natural_gas")
-
-# create electricity bus
-bus_elec = solph.Bus(label="electricity")
-
-# adding the buses to the energy system
-energysystem.add(bgas, bus_elec)
+#solph.constraints.equate_variables(
+#    model,
+#    model.GenericInvestmentStorageBlock.invest[pwr],
+#    model.InvestmentFlow.invest[el, pwr],
+#    factor1=0.5)
 
 # create excess component for the electricity bus to allow overproduction
 energysystem.add(solph.Sink(label='excess_bus_elec', inputs={bus_elec: solph.Flow()}))
