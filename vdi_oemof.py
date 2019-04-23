@@ -4,27 +4,19 @@
 General description
 -------------------
 
-A basic example to show how to model a simple energy system with oemof.solph.
+Simple model  to asses the implementation of Batteries to reduced "peaks" in electric consume
 
 The following energy system is modeled:
 
-                input/output  bgas     bel
-                     |          |        |       |
-                     |          |        |       |
- wind(FixedSource)   |------------------>|       |
-                     |          |        |       |
- pv(FixedSource)     |------------------>|       |
-                     |          |        |       |
- rgas(Commodity)     |--------->|        |       |
-                     |          |        |       |
- demand(Sink)        |<------------------|       |
-                     |          |        |       |
-                     |          |        |       |
- pp_gas(Transformer) |<---------|        |       |
-                     |------------------>|       |
-                     |          |        |       |
- storage(Storage)    |<------------------|       |
-                     |------------------>|       |
+                input/output   bel
+                     |          |        |
+ grid (fixed source) |--------->|        |
+ pv(future use)      |--------->|        |
+                     |          |        |
+ demand(Sink)        |<---------|
+                     |          |        |
+ storage(Storage)    |<------------------|
+                     |------------------>|
 
 
 Data
@@ -34,10 +26,6 @@ input_vdi_oemof.csv
 
 Installation requirements
 -------------------------
-
-This example requires the version v0.2.2 of oemof. Install by:
-
-    pip install 'oemof>=0.2.2,<0.3'
 
 Optional:
 
