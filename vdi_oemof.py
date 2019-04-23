@@ -75,8 +75,9 @@ date_time_index = pd.date_range('1/1/2012', periods=number_of_time_steps,
 
 energysystem = solph.EnergySystem(timeindex=date_time_index)
 
-# Read data file
+# Identify the input filename
 filename = os.path.join(os.path.dirname(__file__), 'input_vdi_oemof.csv')
+# Read data file
 data = pd.read_csv(filename)
 
 ##########################################################################
@@ -148,43 +149,43 @@ logging.info('Create oemof objects')
 bgas = solph.Bus(label="natural_gas")
 
 # create electricity bus
-bel = solph.Bus(label="electricity")
+bus_elec = solph.Bus(label="electricity")
 
 # adding the buses to the energy system
-energysystem.add(bgas, bel)
+energysystem.add(bgas, bus_elec)
 
 # create excess component for the electricity bus to allow overproduction
-energysystem.add(solph.Sink(label='excess_bel', inputs={bel: solph.Flow()}))
+energysystem.add(solph.Sink(label='excess_bus_elec', inputs={bus_elec: solph.Flow()}))
 
 # create source object representing the natural gas commodity (annual limit)
 energysystem.add(solph.Source(label='rgas', outputs={bgas: solph.Flow(
     nominal_value=29825293, summed_max=1)}))
 
 # create fixed source object representing wind power plants
-energysystem.add(solph.Source(label='wind', outputs={bel: solph.Flow(
+energysystem.add(solph.Source(label='wind', outputs={bus_elec: solph.Flow(
     actual_value=data['wind'], nominal_value=1000000, fixed=True)}))
 
 # create fixed source object representing pv power plants
-energysystem.add(solph.Source(label='pv', outputs={bel: solph.Flow(
+energysystem.add(solph.Source(label='pv', outputs={bus_elec: solph.Flow(
     actual_value=data['pv'], nominal_value=582000, fixed=True)}))
 
 # create simple sink object representing the electrical demand
-energysystem.add(solph.Sink(label='demand', inputs={bel: solph.Flow(
+energysystem.add(solph.Sink(label='demand', inputs={bus_elec: solph.Flow(
     actual_value=data['demand_el'], fixed=True, nominal_value=1)}))
 
 # create simple transformer object representing a gas power plant
 energysystem.add(solph.Transformer(
     label="pp_gas",
     inputs={bgas: solph.Flow()},
-    outputs={bel: solph.Flow(nominal_value=10e10, variable_costs=50)},
-    conversion_factors={bel: 0.58}))
+    outputs={bus_elec: solph.Flow(nominal_value=10e10, variable_costs=50)},
+    conversion_factors={bus_elec: 0.58}))
 
 # create storage object representing a battery
 storage = solph.components.GenericStorage(
     nominal_capacity=10077997,
     label='storage',
-    inputs={bel: solph.Flow(nominal_value=10077997/6)},
-    outputs={bel: solph.Flow(nominal_value=10077997/6, variable_costs=0.001)},
+    inputs={bus_elec: solph.Flow(nominal_value=10077997/6)},
+    outputs={bus_elec: solph.Flow(nominal_value=10077997/6, variable_costs=0.001)},
     capacity_loss=0.00, initial_capacity=None,
     inflow_conversion_factor=1, outflow_conversion_factor=0.8,
 )
