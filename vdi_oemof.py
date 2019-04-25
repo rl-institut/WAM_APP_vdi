@@ -9,20 +9,18 @@ Simple model  to asses the implementation of Batteries to reduced "peaks" in ele
 The following energy system is modeled:
 
                 input/output   bel
-                     |          |        |
- grid (fixed source) |--------->|        |
- pv(future use)      |--------->|        |
-                     |          |        |
- demand(Sink)        |<---------|
-                     |          |        |
- storage(Storage)    |<------------------|
-                     |------------------>|
-
+                     |          |
+ grid                |--------->|
+ pv   (future use)  (|--------->|)
+                     |          |
+ Demand              |<---------|
+                     |          |
+ Batterie            |<---------|
+                     |--------->|
 
 Data
 ----
 input_vdi_oemof.csv
-
 
 Installation requirements
 -------------------------
@@ -59,6 +57,9 @@ except ImportError:
     plt = None
 
 
+###############################################################################
+# Define
+###############################################################################
 solver = 'cbc'  # 'glpk', 'gurobi',....
 debug = False  # Set number_of_timesteps to 3 to get a readable lp-file.
 number_of_time_steps = 24*7*8
@@ -69,7 +70,11 @@ logger.define_logging(logfile='oemof_example.log',
                       screen_level=logging.INFO,
                       file_level=logging.DEBUG)
 
-logging.info('Initialize the energy system')
+###############################################################################
+# Set up Energy System
+###############################################################################
+logging.info('set up energy system')
+number_of_time_steps = 24*7*8
 date_time_index = pd.date_range('1/1/2012', periods=number_of_time_steps,
                                 freq='H')
 
@@ -80,25 +85,16 @@ filename = os.path.join(os.path.dirname(__file__), 'input_vdi_oemof.csv')
 # Read data file
 data = pd.read_csv(filename)
 
-##########################################################################
-# Create oemof object
-##########################################################################
 
+##########################################################################
+# Create oemof objects
+##########################################################################
 logging.info('Create oemof objects')
 
-# The bus objects were assigned to variables which makes it easier to connect
-# components to these buses (see below).
-
-# create natural gas bus
-bgas = solph.Bus(label="natural_gas")
-
-# create electricity bus
+# create the different components. Flows are created within the other components
 bus_elec = solph.Bus(label="electricity")
 
-# adding the buses to the energy system
-energysystem.add(bgas, bus_elec)
-
-netz = solph.Source(label='netz',
+nets = solph.Source(label='netz',
                     outputs={bus_elec:
                              solph.Flow(
                                  variable_costs=0.5)})
@@ -110,7 +106,7 @@ demand = solph.Sink(label='el_demand',
                             fixed=True,          # true abgedeckt
                             nominal_value=1)})
 
-storage = solph.components.GenericStorage(
+battery = solph.components.GenericStorage(
                 label='el_storage',
                 inputs={bus_elec:
                         solph.Flow(# alle für Leistung
@@ -136,69 +132,24 @@ storage = solph.components.GenericStorage(
                 outflow_conversion_factor=0.8,
                 capacity_loss=0.003) # Discharge Rate, hängt nur von Zeitl ab
 
-# can be modified: Input = output in costs from flow
-#solph.constraints.equate_variables(
-#    model,
-#    model.InvestmentFlow.invest[bus_elec, storage],
-#    model.InvestmentFlow.invest[storage, bus_elec])
-
-#e/p = 0.5
-#pwr = es.groups['el_storage']
-#el = es.groups['elec']
-
-#solph.constraints.equate_variables(
-#    model,
-#    model.GenericInvestmentStorageBlock.invest[pwr],
-#    model.InvestmentFlow.invest[el, pwr],
-#    factor1=0.5)
-
-# create excess component for the electricity bus to allow overproduction
-energysystem.add(solph.Sink(label='excess_bus_elec', inputs={bus_elec: solph.Flow()}))
-
-# create source object representing the natural gas commodity (annual limit)
-energysystem.add(solph.Source(label='rgas', outputs={bgas: solph.Flow(
-    nominal_value=29825293, summed_max=1)}))
-
-# create fixed source object representing wind power plants
-energysystem.add(solph.Source(label='wind', outputs={bus_elec: solph.Flow(
-    actual_value=data['wind'], nominal_value=1000000, fixed=True)}))
-
-# create fixed source object representing pv power plants
-energysystem.add(solph.Source(label='pv', outputs={bus_elec: solph.Flow(
-    actual_value=data['pv'], nominal_value=582000, fixed=True)}))
-
-# create simple sink object representing the electrical demand
-energysystem.add(solph.Sink(label='demand', inputs={bus_elec: solph.Flow(
-    actual_value=data['demand_el'], fixed=True, nominal_value=1)}))
-
-# create simple transformer object representing a gas power plant
-energysystem.add(solph.Transformer(
-    label="pp_gas",
-    inputs={bgas: solph.Flow()},
-    outputs={bus_elec: solph.Flow(nominal_value=10e10, variable_costs=50)},
-    conversion_factors={bus_elec: 0.58}))
-
-# create storage object representing a battery
-storage = solph.components.GenericStorage(
-    nominal_capacity=10077997,
-    label='storage',
-    inputs={bus_elec: solph.Flow(nominal_value=10077997/6)},
-    outputs={bus_elec: solph.Flow(nominal_value=10077997/6, variable_costs=0.001)},
-    capacity_loss=0.00, initial_capacity=None,
-    inflow_conversion_factor=1, outflow_conversion_factor=0.8,
-)
-
-energysystem.add(storage)
+##########################################################################
+# Add the Components
+##########################################################################
+logging.info('Add the Components')
+energysystem.add(bus_elec, battery, nets, demand)
 
 ##########################################################################
-# Optimise the energy system and plot the results
+# Specify energy system as model
 ##########################################################################
-
-logging.info('Optimise the energy system')
+logging.info('Specify energy system as model')
 
 # initialise the operational model
 model = solph.Model(energysystem)
 
+##########################################################################
+# Define Debugging accessories
+##########################################################################
+logging.info('define Debugging accessories')
 # This is for debugging only. It is not(!) necessary to solve the problem and
 # should be set to False to save time and disc space in normal use. For
 # debugging the timesteps should be set to 3, to increase the readability of
@@ -209,10 +160,16 @@ if debug:
     logging.info('Store lp-file in {0}.'.format(filename))
     model.write(filename, io_options={'symbolic_solver_labels': True})
 
+##########################################################################
+# Optimise the energy system
+##########################################################################
 # if tee_switch is true solver messages will be displayed
 logging.info('Solve the optimization problem')
 model.solve(solver=solver, solve_kwargs={'tee': solver_verbose})
 
+##########################################################################
+# Store the energy system with the results
+##########################################################################
 logging.info('Store the energy system with the results.')
 
 # The processing module of the outputlib can be used to extract the results
@@ -242,7 +199,7 @@ energysystem.restore(dpath=None, filename=None)
 
 # define an alias for shorter calls below (optional)
 results = energysystem.results['main']
-storage = energysystem.groups['storage']
+storage = energysystem.groups['el_storage']
 
 # print a time slice of the state of charge
 print('')
