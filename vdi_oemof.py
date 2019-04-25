@@ -15,7 +15,7 @@ The following energy system is modeled:
                      |          |
  Demand              |<---------|
                      |          |
- Batterie            |<---------|
+ Battery             |<---------|
                      |--------->|
 
 Data
@@ -74,9 +74,9 @@ logger.define_logging(logfile='oemof_example.log',
 # Set up Energy System
 ###############################################################################
 logging.info('set up energy system')
-number_of_time_steps = 24*7*8
-date_time_index = pd.date_range('1/1/2012', periods=number_of_time_steps,
-                                freq='H')
+# 15min time period, for one year
+number_of_time_steps = 4*24*365
+date_time_index = pd.date_range(start='1/1/2018', periods=number_of_time_steps, freq='15min')
 
 energysystem = solph.EnergySystem(timeindex=date_time_index)
 
@@ -84,7 +84,6 @@ energysystem = solph.EnergySystem(timeindex=date_time_index)
 filename = os.path.join(os.path.dirname(__file__), 'input_vdi_oemof.csv')
 # Read data file
 data = pd.read_csv(filename)
-
 
 ##########################################################################
 # Create oemof objects
@@ -97,31 +96,33 @@ bus_elec = solph.Bus(label="electricity")
 nets = solph.Source(label='netz',
                     outputs={bus_elec:
                              solph.Flow(
-                                 variable_costs=0.5)})
+                                 nominal_value=317410000
+                                 , variable_costs=0.5)}
+                    )
 
 demand = solph.Sink(label='el_demand',
                     inputs={bus_elec:
                         solph.Flow(
-                            actual_value=1000,   # timeseries
+                            actual_value=data['demand_el'],   # timeseries
                             fixed=True,          # true abgedeckt
                             nominal_value=1)})
 
 battery = solph.components.GenericStorage(
                 label='el_storage',
                 inputs={bus_elec:
-                        solph.Flow(# alle für Leistung
+                        solph.Flow(  # alle für Leistung
                             investment=solph.Investment(
                                 ep_costs=1000,  # invcost
                                 maximum=100000, # max Leistung
                                 existing=0),     # existing capacity
-                            variable_costs=100)},
-                outputs={bus_elec: # Kosten can be calclulated form in - and output
+                            variable_costs=0.1)},
+                outputs={bus_elec:  # Kosten can be calclulated form in - and output
                          solph.Flow(
                              investment=solph.Investment(
                                  ep_costs=0,
                                  maximum=100000,
                                  existing=0),
-                             variable_costs=100)},
+                             variable_costs=0.3)},
                 investment=solph.Investment(# Kapazität
                     ep_costs=50,
                     maximum=500,
