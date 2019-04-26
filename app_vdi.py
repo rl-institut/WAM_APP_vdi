@@ -1,3 +1,7 @@
+import base64
+import io
+import numpy as np
+import pandas as pd
 import dash
 from dash.dependencies import Output, Input, State
 import dash_core_components as dcc
@@ -51,6 +55,23 @@ def html_param_input(p_name, p_value=0., p_unit='', **kwargs):
     )
 
 
+def parse_upload_contents(contents, filename):
+    content_type, content_string = contents.split(',')
+    decoded = base64.b64decode(content_string)
+    df = pd.DataFrame()
+    try:
+        if 'csv' in filename:
+            # Assume that the user uploaded a CSV file
+            df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
+        elif 'xls' in filename:
+            # Assume that the user uploaded an excel file
+            df = pd.read_excel(io.BytesIO(decoded))
+    except Exception as e:
+        print(e)
+
+    return df.to_json()
+
+
 app.layout = html.Div(
     id='app-div',
     className='app',
@@ -70,7 +91,7 @@ app.layout = html.Div(
                     title='Hover description',
                     children=dcc.Graph(
                         id='timeseries-plot',
-                        figure=go.Figure(data=[]),
+                        figure=go.Figure(data=[go.Scatter(x=[], y=[])]),
                         style={'width': '70%', 'height': '90%'}
                     ),
                 ),
@@ -86,6 +107,7 @@ app.layout = html.Div(
                                 'Drag and Drop or ',
                                 html.A('Select Files')
                             ]),
+                            multiple=False,
                             style={
                                 'width': '100%',
                                 'height': '60px',
@@ -149,6 +171,41 @@ app.layout = html.Div(
         )
     ],
 )
+
+
+@app.callback(
+    Output('data-store', 'data'),
+    [Input('load-data', 'contents')],
+    [
+        State('load-data', 'filename'),
+        State('data-store', 'data')
+    ]
+)
+def update_output(contents, filenames, cur_data):
+    if contents is not None:
+        cur_data.update({'csv_data':  parse_upload_contents(contents, filenames)})
+    return cur_data
+
+
+@app.callback(
+    Output('timeseries-plot', 'figure'),
+    [Input('data-store', 'data')],
+    [State('timeseries-plot', 'figure')]
+)
+def update_output(cur_data, fig):
+    data = cur_data.get('csv_data')
+
+    if data is not None:
+        df = pd.read_json(cur_data['csv_data'])
+        y = np.squeeze(df.values)
+        x = [n * 0.25 for n in range(len(y))]
+        fig['data'][0].update(
+            {
+                'x': x,
+                'y': y,
+            }
+        )
+    return fig
 
 
 if __name__ == '__main__':
