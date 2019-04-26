@@ -15,3 +15,6 @@ django-leaflet
 django-geojson
 pathos
 oemof
+plotly
+dash==0.38.0
+plotly==3.7.1
