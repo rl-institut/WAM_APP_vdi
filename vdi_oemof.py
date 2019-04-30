@@ -54,7 +54,7 @@ import pprint as pp
 try:
     import matplotlib.pyplot as plt
 except ImportError:
-    plt = None
+   plt = None
 
 
 ###############################################################################
@@ -93,11 +93,20 @@ logging.info('Create oemof objects')
 # create the different components. Flows are created within the other components
 bus_elec = solph.Bus(label="electricity")
 
-nets = solph.Source(label='netz',
+netz = solph.Source(label='netz',
                     outputs={bus_elec:
                              solph.Flow(
-                                 nominal_value=317410000
-                                 , variable_costs=0.5)}
+                                 nominal_value=800
+                                 , summed_max=317410000
+                                 , variable_costs=2)}
+                    )
+
+netz_high = solph.Source(label='netz_high',
+                    outputs={bus_elec:
+                             solph.Flow(
+                                 nominal_value=1500
+                                 , summed_max=317410000
+                                 , variable_costs=50)}
                     )
 
 demand = solph.Sink(label='el_demand',
@@ -112,17 +121,17 @@ battery = solph.components.GenericStorage(
                 inputs={bus_elec:
                         solph.Flow(  # alle für Leistung
                             investment=solph.Investment(
-                                ep_costs=1000,  # invcost
-                                maximum=100000, # max Leistung
+                                ep_costs=000,  # invcost
+                                maximum=100000000,# max Leistung
                                 existing=0),     # existing capacity
                             variable_costs=0.1)},
                 outputs={bus_elec:  # Kosten can be calclulated form in - and output
                          solph.Flow(
                              investment=solph.Investment(
                                  ep_costs=0,
-                                 maximum=100000,
+                                 maximum=100000000,
                                  existing=0),
-                             variable_costs=0.3)},
+                             variable_costs=0.1)},
                 investment=solph.Investment(# Kapazität
                     ep_costs=50,
                     maximum=500,
@@ -137,7 +146,7 @@ battery = solph.components.GenericStorage(
 # Add the Components
 ##########################################################################
 logging.info('Add the Components')
-energysystem.add(bus_elec, battery, nets, demand)
+energysystem.add(bus_elec, battery, netz, netz_high, demand)
 
 ##########################################################################
 # Specify energy system as model
@@ -205,8 +214,8 @@ storage = energysystem.groups['el_storage']
 # print a time slice of the state of charge
 print('')
 print('********* State of Charge (slice) *********')
-print(results[(storage, None)]['sequences']['2012-02-25 08:00:00':
-                                            '2012-02-26 15:00:00'])
+print(results[(storage, None)]['sequences']['2018-01-01 00:00:00':
+                                            '2018-12-31 23:00:00'])
 print('')
 
 # get all variables of a specific component/bus
