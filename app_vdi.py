@@ -122,7 +122,7 @@ app.layout = html.Div(
                         html.Button(
                             id='run-btn',
                             className='app__button',
-                            children='Run'
+                            children='Run now'
                         )
                     ]
                 )
