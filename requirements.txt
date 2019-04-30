@@ -15,5 +15,3 @@ pathos
 oemof
 dash==0.38.0
 plotly==3.7.1
-psycopg2
-django-postgresql
