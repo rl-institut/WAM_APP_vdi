@@ -43,6 +43,8 @@ Optional:
 from oemof.tools import logger
 from oemof.tools import helpers
 
+from oemof.tools import economics
+
 import oemof.solph as solph
 import oemof.outputlib as outputlib
 
@@ -50,11 +52,6 @@ import logging
 import os
 import pandas as pd
 import pprint as pp
-
-try:
-    import matplotlib.pyplot as plt
-except ImportError:
-   plt = None
 
 
 ###############################################################################
@@ -85,6 +82,8 @@ filename = os.path.join(os.path.dirname(__file__), 'input_vdi_oemof.csv')
 # Read data file
 data = pd.read_csv(filename)
 
+Lim_Leist = 600 #define the limited power that can be provided before increasing the tarif
+
 ##########################################################################
 # Create oemof objects
 ##########################################################################
@@ -96,7 +95,7 @@ bus_elec = solph.Bus(label="electricity")
 netz = solph.Source(label='netz',
                     outputs={bus_elec:
                              solph.Flow(
-                                 nominal_value=800
+                                 nominal_value=Lim_Leist
                                  , summed_max=317410000
                                  , variable_costs=2)}
                     )
@@ -116,27 +115,32 @@ demand = solph.Sink(label='el_demand',
                             fixed=True,          # true abgedeckt
                             nominal_value=1)})
 
+
+epc_Leist = economics.annuity(capex=1000, n=20, wacc=0.05)
+
+epc_Kap = economics.annuity(capex=100, n=20, wacc=0.05)
+
 battery = solph.components.GenericStorage(
                 label='el_storage',
                 inputs={bus_elec:
                         solph.Flow(  # alle für Leistung
                             investment=solph.Investment(
-                                ep_costs=000,  # invcost
+                                ep_costs=epc_Leist,  # invcost
                                 maximum=100000000,# max Leistung
                                 existing=0),     # existing capacity
-                            variable_costs=0.1)},
+                            variable_costs=0)},
                 outputs={bus_elec:  # Kosten can be calclulated form in - and output
                          solph.Flow(
                              investment=solph.Investment(
-                                 ep_costs=0,
+                                 ep_costs=epc_Leist,
                                  maximum=100000000,
                                  existing=0),
-                             variable_costs=0.1)},
+                             variable_costs=0)},
                 investment=solph.Investment(# Kapazität
-                    ep_costs=50,
-                    maximum=500,
+                    ep_costs=epc_Kap,
+                    maximum=100000000,
                     existing=0),
-                variable_costs=5,
+                variable_costs=0,
                 initial_capacity=1,# am Ende wird gleich
                 inflow_conversion_factor=0.8, # efficiency
                 outflow_conversion_factor=0.8,
@@ -228,19 +232,11 @@ print('')
 custom_storage = outputlib.views.node(results, 'storage')
 electricity_bus = outputlib.views.node(results, 'electricity')
 
-# plot the time series (sequences) of a specific component/bus
-if plt is not None:
-    fig, ax = plt.subplots(figsize=(10,5))
-    custom_storage['sequences'].plot(ax=ax, kind='line', drawstyle='steps-post')
-    plt.legend(loc='upper center', prop={'size':8}, bbox_to_anchor=(0.5, 1.25), ncol=2)
-    fig.subplots_adjust(top=0.8)
-    plt.show()
+#print('')
+#print('********* Batterie costs *********')
+#print(om.InvestStorages.investment_costs())
+#print('')
 
-    fig, ax = plt.subplots(figsize=(10,5))
-    electricity_bus['sequences'].plot(ax=ax, kind='line', drawstyle='steps-post')
-    plt.legend(loc='upper center', prop={'size':8}, bbox_to_anchor=(0.5, 1.3), ncol=2)
-    fig.subplots_adjust(top=0.8)
-    plt.show()
 
 # print the solver results
 print('********* Meta results *********')
