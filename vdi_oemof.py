@@ -211,6 +211,12 @@ energysystem.restore(dpath=None, filename=None)
 results = energysystem.results['main']
 storage = energysystem.groups['el_storage']
 
+# csv-file result generation
+to_print = results[(storage, None)]['sequences']['2018-01-01 00:00:00':
+                                                '2018-12-31 23:00:00']
+result_file = os.path.join(os.path.dirname(__file__), 'result_vdi_oemof.csv')
+to_print.to_csv(path_or_buf=result_file, sep=';', na_rep='', columns=None, header=True)
+
 # print a time slice of the state of charge
 print('')
 print('********* State of Charge (slice) *********')
