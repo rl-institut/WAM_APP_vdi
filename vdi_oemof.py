@@ -72,7 +72,7 @@ logger.define_logging(logfile='oemof_example.log',
 ###############################################################################
 logging.info('set up energy system')
 # 15min time period, for one year
-number_of_time_steps = 4*24*365
+number_of_time_steps = 4*24*1
 date_time_index = pd.date_range(start='1/1/2018', periods=number_of_time_steps, freq='15min')
 
 energysystem = solph.EnergySystem(timeindex=date_time_index)
@@ -94,18 +94,7 @@ bus_elec = solph.Bus(label="electricity")
 
 netz = solph.Source(label='netz',
                     outputs={bus_elec:
-                             solph.Flow(
-                                 nominal_value=Lim_Leist
-                                 , summed_max=317410000
-                                 , variable_costs=2)}
-                    )
-
-netz_high = solph.Source(label='netz_high',
-                    outputs={bus_elec:
-                             solph.Flow(
-                                 nominal_value=1500
-                                 , summed_max=317410000
-                                 , variable_costs=50)}
+                             solph.Flow(variable_costs=2)}
                     )
 
 demand = solph.Sink(label='el_demand',
@@ -115,10 +104,9 @@ demand = solph.Sink(label='el_demand',
                             fixed=True,          # true abgedeckt
                             nominal_value=1)})
 
+epc_Leist = economics.annuity(capex=0, n=20, wacc=0.05)
 
-epc_Leist = economics.annuity(capex=1000, n=20, wacc=0.05)
-
-epc_Kap = economics.annuity(capex=100, n=20, wacc=0.05)
+epc_Kap = economics.annuity(capex=0, n=20, wacc=0.05)
 
 battery = solph.components.GenericStorage(
                 label='el_storage',
@@ -126,19 +114,19 @@ battery = solph.components.GenericStorage(
                         solph.Flow(  # alle für Leistung
                             investment=solph.Investment(
                                 ep_costs=epc_Leist,  # invcost
-                                maximum=100000000,# max Leistung
+                                #maximum=100000000,# max Leistung
                                 existing=0),     # existing capacity
                             variable_costs=0)},
                 outputs={bus_elec:  # Kosten can be calclulated form in - and output
                          solph.Flow(
                              investment=solph.Investment(
                                  ep_costs=epc_Leist,
-                                 maximum=100000000,
+                                 #maximum=100000000,
                                  existing=0),
                              variable_costs=0)},
                 investment=solph.Investment(# Kapazität
                     ep_costs=epc_Kap,
-                    maximum=100000000,
+                    #maximum=100000000,
                     existing=0),
                 variable_costs=0,
                 initial_capacity=1,# am Ende wird gleich
@@ -150,7 +138,7 @@ battery = solph.components.GenericStorage(
 # Add the Components
 ##########################################################################
 logging.info('Add the Components')
-energysystem.add(bus_elec, battery, netz, netz_high, demand)
+energysystem.add(bus_elec, battery, netz, demand)
 
 ##########################################################################
 # Specify energy system as model
@@ -159,20 +147,6 @@ logging.info('Specify energy system as model')
 
 # initialise the operational model
 model = solph.Model(energysystem)
-
-##########################################################################
-# Define Debugging accessories
-##########################################################################
-logging.info('define Debugging accessories')
-# This is for debugging only. It is not(!) necessary to solve the problem and
-# should be set to False to save time and disc space in normal use. For
-# debugging the timesteps should be set to 3, to increase the readability of
-# the lp-file.
-if debug:
-    filename = os.path.join(
-        helpers.extend_basic_path('lp_files'), 'vdi_oemof.lp')
-    logging.info('Store lp-file in {0}.'.format(filename))
-    model.write(filename, io_options={'symbolic_solver_labels': True})
 
 ##########################################################################
 # Optimise the energy system
@@ -186,63 +160,41 @@ model.solve(solver=solver, solve_kwargs={'tee': solver_verbose})
 ##########################################################################
 logging.info('Store the energy system with the results.')
 
-# The processing module of the outputlib can be used to extract the results
-# from the model transfer them into a homogeneous structured dictionary.
-
 # add results to the energy system to make it possible to store them.
 energysystem.results['main'] = outputlib.processing.results(model)
 energysystem.results['meta'] = outputlib.processing.meta_results(model)
 
-# The default path is the '.oemof' folder in your $HOME directory.
-# The default filename is 'es_dump.oemof'.
-# You can omit the attributes (as None is the default value) for testing cases.
-# You should use unique names/folders for valuable results to avoid
-# overwriting.
-
 # store energy system with results
-energysystem.dump(dpath=None, filename=None)
-
-# ****************************************************************************
-# ********** PART 2 - Processing the results *********************************
-# ****************************************************************************
-
-logging.info('**** The script can be divided into two parts here.')
+logging.info('Save the energy system and the results.')
+energysystem.dump(dpath=os.path.dirname(__file__), filename='Results_opt')
 logging.info('Restore the energy system and the results.')
 energysystem = solph.EnergySystem()
-energysystem.restore(dpath=None, filename=None)
+energysystem.restore(dpath=os.path.dirname(__file__), filename='Results_opt')
 
 # define an alias for shorter calls below (optional)
 results = energysystem.results['main']
 storage = energysystem.groups['el_storage']
-
-# csv-file result generation
-to_print = results[(storage, None)]['sequences']['2018-01-01 00:00:00':
-                                                '2018-12-31 23:00:00']
-result_file = os.path.join(os.path.dirname(__file__), 'result_vdi_oemof.csv')
-to_print.to_csv(path_or_buf=result_file, sep=';', na_rep='', columns=None, header=True)
-
-# print a time slice of the state of charge
-print('')
-print('********* State of Charge (slice) *********')
-print(results[(storage, None)]['sequences']['2018-01-01 00:00:00':
-                                            '2018-12-31 23:00:00'])
-print('')
+elect_grid = energysystem.groups['electricity']
 
 # get all variables of a specific component/bus
-custom_storage = outputlib.views.node(results, 'storage')
+custom_storage = outputlib.views.node(results, 'el_storage')
 electricity_bus = outputlib.views.node(results, 'electricity')
 
-#print('')
-#print('********* Batterie costs *********')
-#print(om.InvestStorages.investment_costs())
-#print('')
+# csv-file result generation
+t_2 = electricity_bus['sequences']#.sum(axis=0)
+re_2 = os.path.join(os.path.dirname(__file__), 'tot_elect_traffic.csv')
+t_2.to_csv(path_or_buf=re_2, sep=';', na_rep='', columns=None, header=True)
 
+to_print_1 = results[(storage, None)]['sequences']
+result_file_1 = os.path.join(os.path.dirname(__file__), 'Storage_cap_profile.csv')
+to_print_1.to_csv(path_or_buf=result_file_1, sep=';', na_rep='', columns=None, header=True)
+
+to_p_3 = results[(elect_grid, storage)]['sequences']#.max(axis=0)
+result_file_3 = os.path.join(os.path.dirname(__file__), 'Grid-to-Storage_data.csv')
+to_p_3.to_csv(path_or_buf=result_file_3, sep=';', columns=None, na_rep='', header=True)
 
 # print the solver results
 print('********* Meta results *********')
 pp.pprint(energysystem.results['meta'])
 print('')
 
-# print the sums of the flows around the electricity bus
-print('********* Main results *********')
-print(electricity_bus['sequences'].sum(axis=0))
