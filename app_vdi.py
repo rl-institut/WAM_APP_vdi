@@ -8,6 +8,8 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 
+from vdi_oemof import oemof_results
+
 
 # Initializes dash app
 app = dash.Dash(__name__)
@@ -15,6 +17,9 @@ app = dash.Dash(__name__)
 app.title = 'vdi visualisation'
 
 VDI_DATA = {}
+VDI_PARAM = {
+    'params': {}
+}
 
 
 def html_param_input(p_name, p_value=0., p_unit='', **kwargs):
@@ -77,9 +82,14 @@ app.layout = html.Div(
     className='app',
     children=[
         dcc.Store(
-            id='data-store',
-            storage_type='session',
-            data=VDI_DATA.copy()
+            id='data-store-results',
+            storage_type='memory',
+            data={}
+        ),
+        dcc.Store(
+            id='data-store-param',
+            storage_type='local',
+            data=VDI_PARAM.copy()
         ),
         html.Div(
             id='top-panel-div',
@@ -142,13 +152,19 @@ app.layout = html.Div(
                             className='app__parameters__section',
                             children=[
                                 html.Div('Technische Parameter'),
-                                html_param_input('Zyklenwirkungsgrad', 76.6, '%'),
+                                html_param_input('In_eff_akku', 76.6, '%'),
                                 html_param_input('Entladetiefe', 37, '%'),
                                 html_param_input('C-Rate', 0.5),
                             ]
                         ),
-                        html.Div('Investitionskosten-div'),
-                        html.Div('Betriebskosten-div'),
+                        html.Div(
+                            id='param-inv-div',
+                            className='app__investparameters__section',
+                            children=[
+                                html.Div('Investitionskosten'),
+                                html_param_input('Capex leist', 76.6, '%'),
+                                ]
+                        )
                     ]
                 ),
                 html.Div(
@@ -162,7 +178,7 @@ app.layout = html.Div(
                             className='app__input__dropdown__map',
                             options=[],
                             value=None,
-                            multi=False
+                            multi=False,
                         )
                     ]
                 ),
@@ -172,28 +188,74 @@ app.layout = html.Div(
     ],
 )
 
+PARAM_LIST = [
+    'capex_leist',
+    'Entladetiefe'
+]
+
+PARAM_DICT = {
+    'capex_leist': 'inflow_conversion_factor',
+    'Entladetiefe': 'dkdkd'
+}
+
+param_id_list = [
+    Input('{}-input'.format(p_name.lower()), 'value')
+    for p_name in PARAM_LIST
+]
+
 
 @app.callback(
-    Output('data-store', 'data'),
-    [Input('load-data', 'contents')],
+    Output('data-store-param', 'data'),
+    [Input('load-data', 'contents')] + param_id_list,
     [
         State('load-data', 'filename'),
-        State('data-store', 'data')
+        State('data-store-param', 'data')
     ]
 )
-def update_output(contents, filenames, cur_data):
+def update_data_param(
+        contents,
+        param1,
+        param2,
+        filenames,
+        cur_data
+):
+    print(filenames, contents)
+
+    if param1 is not None:
+        cur_data['params'].update({PARAM_DICT['capex_leist']: param1})
+
+    if param2 is not None:
+        cur_data['params'].update({'was_function': param2})
+
     if contents is not None:
         cur_data.update({'csv_data':  parse_upload_contents(contents, filenames)})
+    print(cur_data)
     return cur_data
 
+@app.callback(
+    Output('data-store-results', 'data'),
+    [Input('run-btn', 'n_clicks')],
+    [State('data-store-param', 'data')]
+)
+def compute_results(n_clicks, cur_params):
+    print(cur_params)
+    oemof_results(cur_params['params'])
+    # ergebinis = oemof_results(param1=77.6, param2=37)
+    # return ergebnis
+
+if __name__ == '__main__':
+    app.run_server(debug=True)
 
 @app.callback(
     Output('timeseries-plot', 'figure'),
-    [Input('data-store', 'data')],
+    [Input('data-store-param', 'data')],
     [State('timeseries-plot', 'figure')]
 )
-def update_output(cur_data, fig):
-    data = cur_data.get('csv_data')
+def update_graph(cur_data, fig):
+    if cur_data is not None:
+        data = cur_data.get('csv_data')
+    else:
+        data = None
 
     if data is not None:
         df = pd.read_json(cur_data['csv_data'])
@@ -207,6 +269,3 @@ def update_output(cur_data, fig):
         )
     return fig
 
-
-if __name__ == '__main__':
-    app.run_server(debug=True)
