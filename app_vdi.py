@@ -155,15 +155,16 @@ app.layout = html.Div(
                                 html_param_input('In_eff_akku', 76.6, '%'),
                                 html_param_input('Entladetiefe', 37, '%'),
                                 html_param_input('C-Rate', 0.5),
+                                html_param_input('C-Rate', 0.5),
                             ]
                         ),
                         html.Div(
                             id='param-inv-div',
                             className='app__investparameters__section',
-                            children=[
-                                html.Div('Investitionskosten'),
-                                html_param_input('Capex leist', 76.6, '%'),
-                                ]
+                            # children=[
+                            #    html.Div('Investitionskosten'),
+                            #   html_param_input('Capex leist', 76.6, '%'),
+                            #    ]
                         )
                     ]
                 ),
@@ -189,12 +190,12 @@ app.layout = html.Div(
 )
 
 PARAM_LIST = [
-    'capex_leist',
-    'Entladetiefe'
+    #'capex_leist',
+    #'Entladetiefe'
 ]
 
 PARAM_DICT = {
-    'capex_leist': 'inflow_conversion_factor',
+    #'capex_leist': 'inflow_conversion_factor',
     'Entladetiefe': 'dkdkd'
 }
 
@@ -214,15 +215,15 @@ param_id_list = [
 )
 def update_data_param(
         contents,
-        param1,
+        #param1,
         param2,
         filenames,
         cur_data
 ):
     print(filenames, contents)
 
-    if param1 is not None:
-        cur_data['params'].update({PARAM_DICT['capex_leist']: param1})
+    #if param1 is not None:
+    #   cur_data['params'].update({PARAM_DICT['capex_leist']: param1})
 
     if param2 is not None:
         cur_data['params'].update({'was_function': param2})
