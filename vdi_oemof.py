@@ -24,7 +24,6 @@ Installation requirements
 -------------------------
 """
 
-
 def Battery_Opt():
 
     # cur_param = {'variable_costs_elect'=10,
