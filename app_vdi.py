@@ -24,6 +24,42 @@ VDI_PARAM = {
     'params': {}
 }
 
+def html_param_output(p_name, p_value=0., p_unit='', **kwargs):
+    """Create a nice html component for parameter inputs.
+
+    :param p_name: (str) the label displayed to the left of the parameter input
+    :param p_value: (number) the initial value of the parameter
+    :param p_unit: (str) the unit displayed to the right of the parameter input
+    :param kwargs: optional arguments for dcc.Input
+    :return: a html.Div instance
+    """
+
+    p_label_name = p_name
+    p_name = p_name.lower()
+
+    return html.Div(
+        id='{}-div'.format(p_name),
+        className='app__input',
+        children=[
+            html.Div(
+                id='{}-label'.format(p_name),
+                className='app__parameter__label',
+                children=p_label_name
+            ),
+            dcc.Input(
+                id='{}-input'.format(p_name),
+                className='app__parameter__output',
+                type='text',
+                value=p_value,
+                **kwargs
+            ),
+            html.Div(
+                id='{}-unit'.format(p_name),
+                className='app__parameter__unit',
+                children=p_unit
+            ),
+        ]
+    )
 
 def html_param_input(p_name, p_value=0., p_unit='', **kwargs):
     """Create a nice html component for parameter inputs.
@@ -194,10 +230,10 @@ app.layout = html.Div(
                     title='Results Model',
                     children=[
                         html.Div('Ergebnisse'),
-                        html_param_input('Kostenreduktion', 0, 'Euro'),
-                        html_param_input('Amortizationsdauer', 0, 'Jahre'),
-                        html_param_input('Speicherleistung', 0, 'kW'),
-                        html_param_input('Speicherkapazität', 0, 'kWh'),
+                        html_param_output('Kostenreduktion', 0, 'Euro'),
+                        html_param_output('Amortizationsdauer', 0, 'Jahre'),
+                        html_param_output('Speicherleistung', 0, 'kW'),
+                        html_param_output('Speicherkapazität', 0, 'kWh'),
                     ]
                 ),
             ]
@@ -365,9 +401,3 @@ def update_graph(cur_data, fig):
             }
         )
     return fig
-
-@app.callback( #updating resultfields kostenred
-    Output('data-store-results', 'data'),
-    [Input('run-btn', 'n_clicks')],
-    [State('data-store-param', 'data')]
-)
