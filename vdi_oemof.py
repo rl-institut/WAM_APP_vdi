@@ -24,94 +24,110 @@ Installation requirements
 -------------------------
 """
 
-# Default logger of oemof
-from oemof.tools import logger
-from oemof.tools import economics
-import oemof.solph as solph
-from oemof.outputlib import processing, views
-import logging
-import os
-import pandas as pd
-import pprint as pp
 
-logging.info('Initialize the energy system')
-# 15min time period, for one year
-number_of_time_steps = 4*24*1  # A day
-date_time_index = pd.date_range(start='1/1/2018', periods=number_of_time_steps, freq='15min')
+def Battery_Opt():
 
-energysystem = solph.EnergySystem(timeindex=date_time_index)
+    # cur_param = {'variable_costs_elect'=10,
+    # }
 
-# Read data file
-full_filename = os.path.join(os.path.dirname(__file__),
-    'input_vdi_oemof.csv')
-data = pd.read_csv(full_filename, sep=",")
+    C_rate = 1/6
+    cap_max = 1000
+    cap_loss = 0.05
+    variable_costs_elect = 10
+    effic = 0.95
 
-consumption_total = data['demand_el'].sum()
 
-# If the period is one year the equivalent periodical costs (epc) of an
-# investment are equal to the annuity. Use oemof's economic tools.
-epc_storage = economics.annuity(capex=1000, n=20, wacc=0.05)
 
-##########################################################################
-# Create oemof objects
-##########################################################################
+    # Default logger of oemof
+    from oemof.tools import logger
+    from oemof.tools import economics
+    import oemof.solph as solph
+    from oemof.outputlib import processing, views
+    import logging
+    import os
+    import pandas as pd
+    import pprint as pp
 
-logging.info('Create oemof objects')
+    logging.info('Initialize the energy system')
+    # 15min time period, for one year
+    number_of_time_steps = 4*24*1  # A day
+    date_time_index = pd.date_range(start='1/1/2018', periods=number_of_time_steps, freq='15min')
 
-# create electricity bus
-bel = solph.Bus(label="electricity")
+    energysystem = solph.EnergySystem(timeindex=date_time_index)
 
-# create source object representing the natural gas commodity (annual limit)
-elect_grid = solph.Source(label='net', outputs={bel: solph.Flow(variable_costs=0.5)})
+    # Read data file
+    full_filename = os.path.join(os.path.dirname(__file__),
+        'input_vdi_oemof.csv')
+    data = pd.read_csv(full_filename, sep=",")
 
-# create simple sink object representing the electrical demand
-demand = solph.Sink(label='demand', inputs={bel: solph.Flow(
-    actual_value=data['demand_el'], fixed=True, nominal_value=1)})
+    consumption_total = data['demand_el'].sum()
 
-# create storage object representing a battery
-storage = solph.components.GenericStorage(
-    label='storage',
-    inputs={bel: solph.Flow(variable_costs=0.0001)},
-    outputs={bel: solph.Flow()},
-    capacity_loss=0.00, initial_capacity=0,
-    invest_relation_input_capacity=1/6,
-    invest_relation_output_capacity=1/6,
-    inflow_conversion_factor=1, outflow_conversion_factor=0.8,
-    investment=solph.Investment(ep_costs=epc_storage),
-)
+    # If the period is one year the equivalent periodical costs (epc) of an
+    # investment are equal to the annuity. Use oemof's economic tools.
+    epc_storage = economics.annuity(capex=1000, n=20, wacc=0.05)
 
-energysystem.add(bel, elect_grid, demand, storage)
+    ##########################################################################
+    # Create oemof objects
+    ##########################################################################
 
-##########################################################################
-# Optimise the energy system
-##########################################################################
+    logging.info('Create oemof objects')
 
-logging.info('Optimise the energy system')
+    # create electricity bus
+    bel = solph.Bus(label="electricity")
 
-# initialise the operational model
-om = solph.Model(energysystem)
+    # create source object representing the natural gas commodity (annual limit)
+    elect_grid = solph.Source(label='net', outputs={bel: solph.Flow(variable_costs=variable_costs_elect)})
 
-# if tee_switch is true solver messages will be displayed
-logging.info('Solve the optimization problem')
-om.solve(solver='cbc', solve_kwargs={'tee': True})
+    # create simple sink object representing the electrical demand
+    demand = solph.Sink(label='demand', inputs={bel: solph.Flow(
+        actual_value=data['demand_el'], fixed=True, nominal_value=1)})
 
-##########################################################################
-# Check and plot the results
-##########################################################################
+    # create storage object representing a battery
+    storage = solph.components.GenericStorage(
+        label='storage',
+        inputs={bel: solph.Flow(variable_costs=0.0001)},
+        outputs={bel: solph.Flow()}, capacity_max =cap_max,
+        capacity_loss=cap_loss, initial_capacity=0,
+        invest_relation_input_capacity=C_rate,
+        invest_relation_output_capacity=C_rate,
+        inflow_conversion_factor=1, outflow_conversion_factor=effic,
+        investment=solph.Investment(ep_costs=epc_storage),
+    )
 
-# check if the new result object is working for custom components
-results = processing.results(om)
+    energysystem.add(bel, elect_grid, demand, storage)
 
-custom_storage = views.node(results, 'storage')
-electricity_bus = views.node(results, 'electricity')
+    ##########################################################################
+    # Optimise the energy system
+    ##########################################################################
 
-meta_results = processing.meta_results(om)
-pp.pprint(meta_results)
+    logging.info('Optimise the energy system')
 
-my_results = electricity_bus['scalars']
+    # initialise the operational model
+    om = solph.Model(energysystem)
 
-# installed capacity of storage in GWh
-my_results['storage_invest_GWh'] = (results[(storage, None)]
-                            ['scalars']['invest']/1e6)
+    # if tee_switch is true solver messages will be displayed
+    logging.info('Solve the optimization problem')
+    om.solve(solver='cbc', solve_kwargs={'tee': True})
 
-pp.pprint(my_results)
+    ##########################################################################
+    # Check and plot the results
+    ##########################################################################
+
+    # check if the new result object is working for custom components
+    results = processing.results(om)
+
+    custom_storage = views.node(results, 'storage')
+    electricity_bus = views.node(results, 'electricity')
+
+    meta_results = processing.meta_results(om)
+    pp.pprint(meta_results)
+
+    my_results = electricity_bus['scalars']
+
+    # installed capacity of storage in GWh
+    my_results['storage_invest_GWh'] = (results[(storage, None)]
+                                ['scalars']['invest']/1e6)
+
+    pp.pprint(my_results)
+
+    return my_results

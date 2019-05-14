@@ -8,7 +8,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 
-from vdi_oemof import oemof_results
+from vdi_oemof import Battery_Opt  # importing the Oemofmodel as function
 
 
 # Initializes dash app
@@ -16,7 +16,10 @@ app = dash.Dash(__name__)
 
 app.title = 'vdi visualisation'
 
-VDI_DATA = {}
+VDI_RESULTS = {
+    'results': {}
+}
+
 VDI_PARAM = {
     'params': {}
 }
@@ -59,6 +62,55 @@ def html_param_input(p_name, p_value=0., p_unit='', **kwargs):
         ]
     )
 
+def html_param_input_dob(p_name, p_value=0., p_unit='', p_value_2=0., p_unit_2='', **kwargs):
+    """Create a html component for a double parameter input.
+
+    :param p_name: (str) the label displayed to the left of the parameter input
+    :param p_value: (number) the initial primary value of the parameter
+    :param p_value_2: (number) the initial secundary value of the parameter
+    :param p_unit: (str) the unit displayed to the right of the parameter input
+    :param kwargs: optional arguments for dcc.Input
+    :return: a html.Div instance
+    """
+
+    p_label_name = p_name
+    p_name = p_name.lower()
+
+    return html.Div(
+        id='{}-div'.format(p_name),
+        className='app__input',
+        children=[
+            html.Div(
+                id='{}-label'.format(p_name),
+                className='app__parameter_2__label',
+                children=p_label_name
+            ),
+            dcc.Input(
+                id='{}-input'.format(p_name),
+                className='app__parameter_2__input',
+                type='number',
+                value=p_value,
+                **kwargs
+            ),
+            html.Div(
+                id='{}-unit'.format(p_name),
+                className='app__parameter_2__unit',
+                children=p_unit
+            ),
+            dcc.Input(
+                id='{}-input_2'.format(p_name),
+                className='app__parameter_2__input',
+                type='number',
+                value=p_value_2,
+                **kwargs
+            ),
+            html.Div(
+                id='{}-uit_2'.format(p_name),
+                className='app__parameter_2__unit',
+                children=p_unit_2
+            ),
+        ]
+    )
 
 def parse_upload_contents(contents, filename):
     content_type, content_string = contents.split(',')
@@ -84,7 +136,7 @@ app.layout = html.Div(
         dcc.Store(
             id='data-store-results',
             storage_type='memory',
-            data={}
+            data=VDI_RESULTS.copy()
         ),
         dcc.Store(
             id='data-store-param',
@@ -135,7 +187,19 @@ app.layout = html.Div(
                             children='Run now'
                         )
                     ]
-                )
+                ),
+                html.Div(
+                    id='results-div',
+                    className='app__section',
+                    title='Results Model',
+                    children=[
+                        html.Div('Ergebnisse'),
+                        html_param_input('Kostenreduktion', 0, 'Euro'),
+                        html_param_input('Amortizationsdauer', 0, 'Jahre'),
+                        html_param_input('Speicherleistung', 0, 'kW'),
+                        html_param_input('Speicherkapazität', 0, 'kWh'),
+                    ]
+                ),
             ]
         ),
         html.Div(
@@ -149,38 +213,36 @@ app.layout = html.Div(
                     children=[
                         html.Div(
                             id='param-tech-div',
-                            className='app__parameters__section',
+                            className='app__section',
                             children=[
                                 html.Div('Technische Parameter'),
-                                html_param_input('In_eff_akku', 76.6, '%'),
+                                html_param_input('Zyklenwirkungsgrad', 76.6, '%'),
                                 html_param_input('Entladetiefe', 37, '%'),
-                                html_param_input('C-Rate', 0.5),
                                 html_param_input('C-Rate', 0.5),
                             ]
                         ),
                         html.Div(
-                            id='param-inv-div',
-                            className='app__investparameters__section',
-                            # children=[
-                            #    html.Div('Investitionskosten'),
-                            #   html_param_input('Capex leist', 76.6, '%'),
-                            #    ]
+                            id='param-opex-div',
+                            className='app__section',
+                            children=[
+                                html.Div('Investitionskosten'),
+                                html_param_input('Leistung', 1000, 'kW'),
+                                html_param_input('Kapazität', 5000, 'kWh'),
+                                html_param_input('Raum', 1, 'Jahre'),
+                            ]
                         )
                     ]
                 ),
                 html.Div(
-                    id='results-div',
-                    className='app__results',
+                    id='param-capex-div',
+                    className='app__section',
                     title='Results description',
                     children=[
-                        html.Div('Ergebnisse'),
-                        dcc.Dropdown(
-                            id='country-input',
-                            className='app__input__dropdown__map',
-                            options=[],
-                            value=None,
-                            multi=False,
-                        )
+                        html.Div('Betriebskosten'),
+                        html_param_input_dob('Netztentgelt', 87, 'Euro/(kW*Jahr)', 0.07, 'Steigerung/Jahr'),
+                        html_param_input_dob('Strom', 0.1537, 'Euro/kWh', 0.04, 'Steigerung/Jahr'),
+                        html_param_input_dob('Batteriespeicher', 1, 'Euro/(kW*Jahr)', 0.07, 'Steigerung/Jahr'),
+                        html_param_input('Kalkulationszinsatz', 7, '%'),
                     ]
                 ),
             ]
@@ -189,14 +251,32 @@ app.layout = html.Div(
     ],
 )
 
+
 PARAM_LIST = [
-    #'capex_leist',
-    #'Entladetiefe'
+    'Entladetiefe',
+    'Netztentgelt',
+    'Strom',
+    'Batteriespeicher',
+    'Kalkulationszinsatz',
+    'Leistung',
+    'Kapazität',
+    'Raum',
+    'Zyklenwirkungsgrad',
+    'C-Rate',
 ]
 
+# Naming for the app
 PARAM_DICT = {
-    #'capex_leist': 'inflow_conversion_factor',
-    'Entladetiefe': 'dkdkd'
+    'Entladetiefe':'capacity-loss',
+    'Netztentgelt': 'fixcosts_strom',
+    'Strom': 'var-costs_strom',
+    'Batteriespeicher': 'cost_bat',
+    'Kalkulationszinsatz':'',
+    'Leistung':'',
+    'Kapazität': 'cap_max',
+    'Raum':'',
+    'Zyklenwirkungsgrad': 'effic',
+    'C-Rate':'',
 }
 
 param_id_list = [
@@ -204,10 +284,11 @@ param_id_list = [
     for p_name in PARAM_LIST
 ]
 
-
-@app.callback(
+@app.callback( #updating param dcc from contents
     Output('data-store-param', 'data'),
-    [Input('load-data', 'contents')] + param_id_list,
+    [
+        Input('load-data', 'contents')
+    ] + param_id_list,
     [
         State('load-data', 'filename'),
         State('data-store-param', 'data')
@@ -215,39 +296,54 @@ param_id_list = [
 )
 def update_data_param(
         contents,
-        #param1,
-        param2,
+        Entladetiefe,
+        Netztentgelt,
+        Strom,
+        Batteriespeicher,
+        Kalkulationszinsatz,
+        Leistung,
+        Kapazität,
+        Raum,
+        Zyklenwirkungsgrad,
+        CRate,
         filenames,
-        cur_data
+        cur_param
 ):
-    print(filenames, contents)
+    param_value_list = [
+        Entladetiefe,
+        Netztentgelt,
+        Strom,
+        Batteriespeicher,
+        Kalkulationszinsatz,
+        Leistung,
+        Kapazität,
+        Raum,
+        Zyklenwirkungsgrad,
+        CRate,
+    ]
 
-    #if param1 is not None:
-    #   cur_data['params'].update({PARAM_DICT['capex_leist']: param1})
-
-    if param2 is not None:
-        cur_data['params'].update({'was_function': param2})
+    for p, n in zip(param_value_list, PARAM_LIST):
+        if p is not None:
+            cur_param['params'].update({PARAM_DICT[n]: p})
 
     if contents is not None:
-        cur_data.update({'csv_data':  parse_upload_contents(contents, filenames)})
-    print(cur_data)
-    return cur_data
+        cur_param.update({'csv_data':  parse_upload_contents(contents, filenames)})
+    #print(cur_param)
+    return cur_param
 
-@app.callback(
+@app.callback( #updating results dcc when button click
     Output('data-store-results', 'data'),
     [Input('run-btn', 'n_clicks')],
     [State('data-store-param', 'data')]
 )
 def compute_results(n_clicks, cur_params):
-    print(cur_params)
-    oemof_results(cur_params['params'])
-    # ergebinis = oemof_results(param1=77.6, param2=37)
-    # return ergebnis
+    Results_model = Battery_Opt()
+    return Results_model
 
 if __name__ == '__main__':
     app.run_server(debug=True)
 
-@app.callback(
+@app.callback(  # Updating plot
     Output('timeseries-plot', 'figure'),
     [Input('data-store-param', 'data')],
     [State('timeseries-plot', 'figure')]
@@ -270,3 +366,8 @@ def update_graph(cur_data, fig):
         )
     return fig
 
+@app.callback( #updating resultfields kostenred
+    Output('data-store-results', 'data'),
+    [Input('run-btn', 'n_clicks')],
+    [State('data-store-param', 'data')]
+)
