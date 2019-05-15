@@ -8,7 +8,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 
-from vdi_oemof import Battery_Opt  # importing the Oemofmodel as function
+from bookkeeping.py import simulate_energysystem
 
 
 # Initializes dash app
@@ -373,7 +373,7 @@ def update_data_param(
     [State('data-store-param', 'data')]
 )
 def compute_results(n_clicks, cur_params):
-    Results_model = Battery_Opt()
+    Results_model = simulate_energysystem()
     return Results_model
 
 if __name__ == '__main__':

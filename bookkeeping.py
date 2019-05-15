@@ -1,20 +1,22 @@
 import multiprocessing as mp
-from stemp_abw.simulation.simulation import default_simulation_fct
+from vdi_oemof.py import Battery_Opt
 
 
-def simulate_energysystem(esys):
-    simulation_fct = default_simulation_fct
+def simulate_energysystem(**kwargs):
+    simulation_batt = Battery_Opt
     results, parameters = multiprocess_energysystem(
-        esys,
-        simulation_fct)
+       #esys,
+        simulation_batt)
     return results, parameters
 
 
-def multiprocess_energysystem(esys, simulate_fct):
+def multiprocess_energysystem(simulation_batt, **kwargs):
     queue = mp.Queue()
     p = mp.Process(
         target=queue_energysystem,
-        args=(queue, esys, simulate_fct)
+        args=(queue,
+              #esys,
+              simulation_batt)
     )
     p.start()
     results = queue.get()
@@ -22,9 +24,9 @@ def multiprocess_energysystem(esys, simulate_fct):
     return results
 
 
-def queue_energysystem(queue, esys, simulate_fct):
+def queue_energysystem(queue, simulation_batt, **kwargs):
     """
     All function in fcts are succesively run on energysystem
     """
-    results = simulate_fct(esys)
+    results = simulation_batt()
     queue.put(results)
