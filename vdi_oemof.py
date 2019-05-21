@@ -50,7 +50,8 @@ consumption_total = data['demand_el'].sum()
 
 # If the period is one year the equivalent periodical costs (epc) of an
 # investment are equal to the annuity. Use oemof's economic tools.
-epc_storage = economics.annuity(capex=1000, n=20, wacc=0.05)
+epc_leistung = economics.annuity(capex=1000, n=20, wacc=0.05)
+epc_strom = economics.annuity(capex=500, n=20, wacc=0.04)
 
 ##########################################################################
 # Create oemof objects
@@ -62,7 +63,12 @@ logging.info('Create oemof objects')
 bel = solph.Bus(label="electricity")
 
 # create source object representing the natural gas commodity (annual limit)
-elect_grid = solph.Source(label='net', outputs={bel: solph.Flow(variable_costs=0.5)})
+elect_grid = solph.Source(label='net',
+                          outputs={bel: solph.Flow(variable_costs=0.5,
+                                                   investment=solph.Investment(ep_costs=epc_leistung, maximum=50000)
+                                                   )
+                                   }
+                          )
 
 # create simple sink object representing the electrical demand
 demand = solph.Sink(label='demand', inputs={bel: solph.Flow(
@@ -71,13 +77,17 @@ demand = solph.Sink(label='demand', inputs={bel: solph.Flow(
 # create storage object representing a battery
 storage = solph.components.GenericStorage(
     label='storage',
-    inputs={bel: solph.Flow(variable_costs=0.0001)},
-    outputs={bel: solph.Flow()},
+    inputs={bel: solph.Flow(variable_costs=0.0001,
+                            investment=solph.Investment(ep_costs=epc_leistung, maximum=50000)
+                            )},
+    outputs={bel: solph.Flow(variable_costs=0.0001,
+                            investment=solph.Investment(ep_costs=epc_leistung, maximum=50000)
+                            )},
     capacity_loss=0.00, initial_capacity=0,
     invest_relation_input_capacity=1/6,
     invest_relation_output_capacity=1/6,
     inflow_conversion_factor=1, outflow_conversion_factor=0.8,
-    investment=solph.Investment(ep_costs=epc_storage),
+    investment=solph.Investment(ep_costs=epc_strom),
 )
 
 energysystem.add(bel, elect_grid, demand, storage)
@@ -90,6 +100,15 @@ logging.info('Optimise the energy system')
 
 # initialise the operational model
 om = solph.Model(energysystem)
+
+battery = energysystem.groups['storage']
+# grid = energysystem.groups['net']
+
+solph.constraints.equate_variables(
+ om,
+ om.InvestmentFlow.invest[battery, bel],
+ om.InvestmentFlow.invest[bel, battery]
+)
 
 # if tee_switch is true solver messages will be displayed
 logging.info('Solve the optimization problem')
