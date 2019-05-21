@@ -60,7 +60,7 @@ epc_strom = economics.annuity(capex=500, n=20, wacc=0.04)
 logging.info('Create oemof objects')
 
 # create electricity bus
-bel = solph.Bus(label="electricity")
+bel = solph.Bus(label='electricity')
 
 # create source object representing the natural gas commodity (annual limit)
 elect_grid = solph.Source(label='net',
@@ -76,7 +76,7 @@ demand = solph.Sink(label='demand', inputs={bel: solph.Flow(
 
 # create storage object representing a battery
 storage = solph.components.GenericStorage(
-    label='storage',
+    label='battery',
     inputs={bel: solph.Flow(variable_costs=0.0001,
                             investment=solph.Investment(ep_costs=epc_leistung, maximum=50000)
                             )},
@@ -101,18 +101,18 @@ logging.info('Optimise the energy system')
 # initialise the operational model
 om = solph.Model(energysystem)
 
-battery = energysystem.groups['storage']
+Battery = energysystem.groups['battery']
 # grid = energysystem.groups['net']
 
 solph.constraints.equate_variables(
  om,
- om.InvestmentFlow.invest[battery, bel],
- om.InvestmentFlow.invest[bel, battery]
+ om.InvestmentFlow.invest[Battery, bel],
+ om.InvestmentFlow.invest[bel, Battery]
 )
 
 # if tee_switch is true solver messages will be displayed
 logging.info('Solve the optimization problem')
-om.solve(solver='glpk', solve_kwargs={'tee': True})
+om.solve(solver='glpk', solve_kwargs={'tee': False})
 
 ##########################################################################
 # Check and plot the results
@@ -130,7 +130,9 @@ pp.pprint(meta_results)
 my_results = electricity_bus['scalars']
 
 # installed capacity of storage in GWh
-my_results['storage_invest_GWh'] = (results[(storage, None)]
-                            ['scalars']['invest']/1e6)
+my_results['storage_kap'] = (results[(storage, None)]
+                            ['scalars']['invest'])
+# my_results['storage_power'] = results # [(storage, bel)]['sequences'].sum()
+
 
 pp.pprint(my_results)
