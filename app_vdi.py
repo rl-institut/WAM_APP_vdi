@@ -8,7 +8,7 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objs as go
 
-from bookkeeping.py import simulate_energysystem
+from bookkeeping import simulate_energysystem
 
 
 # Initializes dash app

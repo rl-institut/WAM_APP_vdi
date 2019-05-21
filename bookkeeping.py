@@ -1,5 +1,5 @@
 import multiprocessing as mp
-from vdi_oemof.py import Battery_Opt
+from vdi_oemof import Battery_Opt
 
 
 def simulate_energysystem(**kwargs):

@@ -106,7 +106,7 @@ def Battery_Opt():
 
     # if tee_switch is true solver messages will be displayed
     logging.info('Solve the optimization problem')
-    om.solve(solver='glpk"', solve_kwargs={'tee': True})
+    om.solve(solver='glpk', solve_kwargs={'tee': False})
 
     ##########################################################################
     # Check and plot the results
@@ -119,7 +119,7 @@ def Battery_Opt():
     electricity_bus = views.node(results, 'electricity')
 
     meta_results = processing.meta_results(om)
-    pp.pprint(meta_results)
+    # pp.pprint(meta_results)
 
     my_results = electricity_bus['scalars']
 
@@ -127,6 +127,6 @@ def Battery_Opt():
     my_results['storage_invest_GWh'] = (results[(storage, None)]
                                 ['scalars']['invest']/1e6)
 
-    pp.pprint(my_results)
+    # pp.pprint(my_results)
 
-    return my_results
+    return custom_storage  #my_results['storage_invest_GWh']
