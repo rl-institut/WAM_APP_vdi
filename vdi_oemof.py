@@ -75,7 +75,9 @@ def Battery_Opt():
     bel = solph.Bus(label="electricity")
 
     # create source object representing the natural gas commodity (annual limit)
-    elect_grid = solph.Source(label='net', outputs={bel: solph.Flow(variable_costs=variable_costs_elect)})
+    elect_grid = solph.Source(label='net', outputs={bel: solph.Flow(variable_costs=variable_costs_elect,
+                                                                    investment=solph.Investment(ep_costs=5000))},
+                              investment=solph.Investment(ep_costs=epc_storage))
 
     # create simple sink object representing the electrical demand
     demand = solph.Sink(label='demand', inputs={bel: solph.Flow(
@@ -126,7 +128,14 @@ def Battery_Opt():
     # installed capacity of storage in GWh
     my_results['storage_invest_GWh'] = (results[(storage, None)]
                                 ['scalars']['invest']/1e6)
+    # sto_res = pp.pprint(custom_storage)
+    # json.dumps(custom_storage)
+    # import pdb; pdb.set_trace()
+    # return custom_storage  #my_results['storage_invest_GWh']
 
-    # pp.pprint(my_results)
+    import json
+    with open('result.json', 'w') as fp:
+        json.dumps(custom_storage, fp)
 
-    return custom_storage  #my_results['storage_invest_GWh']
+if __name__ == "__main__":
+    Battery_Opt()
