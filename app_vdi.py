@@ -265,9 +265,9 @@ app.layout = html.Div(
                             className='app__section',
                             children=[
                                 html.Div('Investitionskosten'),
-                                html_param_input('Leistung', 1000, 'kW'),
+                                html_param_input('Leistung_cost', 1000, 'kW'),
                                 html_param_input('Kapazität', 5000, 'kWh'),
-                                html_param_input('Raum', 1, 'Jahre'),
+                                html_param_input('Zeitraum', 1, 'Jahre'),
                             ]
                         )
                     ]
@@ -279,7 +279,7 @@ app.layout = html.Div(
                     children=[
                         html.Div('Betriebskosten'),
                         html_param_input_dob('Netztentgelt', 87, 'Euro/(kW*Jahr)', 0.07, 'Steigerung/Jahr'),
-                        html_param_input_dob('Strom', 0.1537, 'Euro/kWh', 0.04, 'Steigerung/Jahr'),
+                        html_param_input_dob('Strom_cost', 0.1537, 'Euro/kWh', 0.04, 'Steigerung/Jahr'),
                         html_param_input_dob('Batteriespeicher', 1, 'Euro/(kW*Jahr)', 0.07, 'Steigerung/Jahr'),
                         html_param_input('Kalkulationszinsatz', 7, '%'),
                     ]
@@ -294,28 +294,28 @@ app.layout = html.Div(
 PARAM_LIST = [
     'Entladetiefe',
     'Netztentgelt',
-    'Strom',
+    'Strom_cost',
     'Batteriespeicher',
     'Kalkulationszinsatz',
-    'Leistung',
+    'Leistung_cost',
     'Kapazität',
-    'Raum',
+    'Zeitraum',
     'Zyklenwirkungsgrad',
     'C-Rate',
 ]
 
 # Naming for the app
 PARAM_DICT = {
-    'Entladetiefe':'capacity-loss',
-    'Netztentgelt': 'fixcosts_strom',
-    'Strom': 'var-costs_strom',
+    'Entladetiefe': 'cap_loss',
+    'Netztentgelt': 'f_1',
+    'Strom_cost': 'variable_costs_elect',
     'Batteriespeicher': 'cost_bat',
-    'Kalkulationszinsatz':'',
-    'Leistung':'',
+    'Kalkulationszinsatz': 'f_2',
+    'Leistung_cost': 'f_3',
     'Kapazität': 'cap_max',
-    'Raum':'',
+    'Zeitraum': 'z_raum',
     'Zyklenwirkungsgrad': 'effic',
-    'C-Rate':'',
+    'C-Rate': 'c_rate',
 }
 
 param_id_list = [
@@ -337,12 +337,12 @@ def update_data_param(
         contents,
         Entladetiefe,
         Netztentgelt,
-        Strom,
+        Strom_cost,
         Batteriespeicher,
         Kalkulationszinsatz,
-        Leistung,
+        Leistung_cost,
         Kapazität,
-        Raum,
+        Zeitraum,
         Zyklenwirkungsgrad,
         CRate,
         filenames,
@@ -351,12 +351,12 @@ def update_data_param(
     param_value_list = [
         Entladetiefe,
         Netztentgelt,
-        Strom,
+        Strom_cost,
         Batteriespeicher,
         Kalkulationszinsatz,
-        Leistung,
+        Leistung_cost,
         Kapazität,
-        Raum,
+        Zeitraum,
         Zyklenwirkungsgrad,
         CRate,
     ]
@@ -367,34 +367,40 @@ def update_data_param(
 
     if contents is not None:
         cur_param.update({'csv_data':  parse_upload_contents(contents, filenames)})
-    #print(cur_param)
     return cur_param
 
-# @app.callback( #updating results dcc when button click
-#     Output('data-store-results', 'data'),
-#     [Input('run-btn', 'n_clicks')],
-#     [State('data-store-param', 'data')]
-# )
-# def compute_results(n_clicks, cur_params):
-#     Results_model = simulate_energysystem()
-#     return Results_model
+@app.callback( #updating results dcc when button click
+    Output('data-store-results', 'data'),
+    [Input('run-btn', 'n_clicks')],
+    [
+        State('data-store-param', 'data'),
+        State('data-store-results', 'data')
+    ]
+)
+def compute_results(n_clicks, cur_param_data, cur_res_data):
+    if n_clicks is not None:
+        print(pd.read_json(cur_param_data['csv_data']))
+        results_model = simulate_energysystem(cur_param_data['csv_data'], cur_param_data['params'])
+        #print(cur_param_data['params'], results_model)
+        cur_res_data.update(results_model)
+    return cur_res_data
 
 @app.callback( #updating results dcc when button click
     Output('kostenreduktion-input', 'value'),
     [
-        Input('run-btn', 'n_clicks'),
-        # Input('data-store-results', 'data')
+        #Input('run-btn', 'n_clicks'),
+         Input('data-store-results', 'data')
     ]
 )
 def compute_kostenreduktion(cur_output):
     answer = None
     if cur_output is not None:
-        with open('result.json') as json_file:
-            data = json.load(json_file)
+        # with open('result.json') as json_file:
+        #     data = json.load(json_file)
 
-        answer = data['kostenreduktion']
+        answer = cur_output.get('kostenreduktion')
 
-        # answer = cur_output['kostenreduktion']
+        # answer = cur_output.get('kostenreduktion')
 
     return answer
 
@@ -402,17 +408,17 @@ def compute_kostenreduktion(cur_output):
 @app.callback( #updating results dcc when button click
     Output('amortizationsdauer-input', 'value'),
     [
-        Input('run-btn', 'n_clicks'),
-        # Input('data-store-results', 'data')
+        #Input('run-btn', 'n_clicks'),
+         Input('data-store-results', 'data')
     ]
 )
 def compute_amortizationsdauer(cur_output):
     answer = None
     if cur_output is not None:
-        with open('result.json') as json_file:
-            data = json.load(json_file)
+        # with open('result.json') as json_file:
+        #     data = json.load(json_file)
 
-        answer = data['amortizationsdauer']
+        answer = cur_output.get('amortizationsdauer')
 
         # answer = cur_output['amortizationsdauer']
 
@@ -421,39 +427,38 @@ def compute_amortizationsdauer(cur_output):
 @app.callback( #updating results dcc when button click
     Output('speicherleistung-input', 'value'),
     [
-        Input('run-btn', 'n_clicks'),
-        # Input('data-store-results', 'data')
+        #Input('run-btn', 'n_clicks'),
+         Input('data-store-results', 'data')
     ]
 )
 def compute_speicherleistung(cur_output):
     answer = None
     if cur_output is not None:
-        with open('result.json') as json_file:
-            data = json.load(json_file)
+        # with open('result.json') as json_file:
+        #     data = json.load(json_file)
 
-        answer = data['speicherleistung']
+        answer = cur_output.get('speicherleistung')
 
-        # answer = cur_output['speicherleistung']
+        # answer = cur_output.get('speicherleistung')
 
     return answer
-
 
 @app.callback( #updating results dcc when button click
     Output('speicherkapazität-input', 'value'),
     [
-        Input('run-btn', 'n_clicks'),
-        # Input('data-store-results', 'data')
+        #Input('run-btn', 'n_clicks'),
+         Input('data-store-results', 'data')
     ]
 )
 def compute_speicherkapazität(cur_output):
     answer = None
     if cur_output is not None:
-        with open('result.json') as json_file:
-            data = json.load(json_file)
+        # with open('result.json') as json_file:
+        #     data = json.load(json_file)
 
-        answer = data['speicherkapazität']
+        answer = cur_output.get('speicherkapazität')
 
-        # answer = cur_output['speicherkapazität']
+        # answer = cur_output.get('speicherkapazität')
 
     return answer
 
