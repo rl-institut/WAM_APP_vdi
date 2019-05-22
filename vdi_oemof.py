@@ -86,7 +86,7 @@ def Battery_Opt():
     # create storage object representing a battery
     storage = solph.components.GenericStorage(
         label='storage',
-        inputs={bel: solph.Flow(variable_costs=0.0001)},
+        inputs={bel: solph.Flow(variable_costs=0.1)},
         outputs={bel: solph.Flow()}, capacity_max =cap_max,
         capacity_loss=cap_loss, initial_capacity=0,
         invest_relation_input_capacity=C_rate,
@@ -117,25 +117,40 @@ def Battery_Opt():
     # check if the new result object is working for custom components
     results = processing.results(om)
 
-    custom_storage = views.node(results, 'storage')
-    electricity_bus = views.node(results, 'electricity')
+    #custom_storage = views.node(results, 'storage')
+    #electricity_bus = views.node(results, 'electricity')
 
     meta_results = processing.meta_results(om)
-    # pp.pprint(meta_results)
+    #pp.pprint(meta_results['objective'])
 
-    my_results = electricity_bus['scalars']
+    #my_results = electricity_bus['scalars']
 
     # installed capacity of storage in GWh
-    my_results['storage_invest_GWh'] = (results[(storage, None)]
-                                ['scalars']['invest']/1e6)
+    #my_results['storage_invest_GWh'] = (results[(storage, None)]
+                                #['scalars']['invest']/1e6)
     # sto_res = pp.pprint(custom_storage)
     # json.dumps(custom_storage)
     # import pdb; pdb.set_trace()
     # return custom_storage  #my_results['storage_invest_GWh']
 
+    to_publish = {}
+    to_publish['kostenreduktion']    = 2179351 - meta_results['objective']
+    to_publish['amortizationsdauer'] = number_of_time_steps/(4*24*365.15)
+    to_publish['speicherleistung']   = results[(storage, bel)]['sequences']['flow'].max()
+    to_publish['speicherkapazität']   = results[(storage, None)]['sequences']['capacity'].max()
+
+    #[(storage, None)]['scalars']['invest']
+    # custom_storage['scalars']# ['invest']
+        # results[(storage, bel)]
+        #          ['sequences']['flow'].max()
+    # custom_storage['sequences']['capacity'].max()
+
+    pp.pprint(to_publish)
+
     import json
     with open('result.json', 'w') as fp:
-        json.dumps(custom_storage, fp)
+        json.dump(to_publish, fp)
+
 
 if __name__ == "__main__":
     Battery_Opt()

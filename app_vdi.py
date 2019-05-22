@@ -1,5 +1,6 @@
 import base64
 import io
+import json
 import numpy as np
 import pandas as pd
 import dash
@@ -23,6 +24,8 @@ VDI_RESULTS = {
 VDI_PARAM = {
     'params': {}
 }
+
+
 
 def html_param_output(p_name, p_value=0., p_unit='', **kwargs):
     """Create a nice html component for parameter inputs.
@@ -171,12 +174,12 @@ app.layout = html.Div(
     children=[
         dcc.Store(
             id='data-store-results',
-            storage_type='memory',
+            storage_type='local',
             data=VDI_RESULTS.copy()
         ),
         dcc.Store(
             id='data-store-param',
-            storage_type='local',
+            storage_type='session',
             data=VDI_PARAM.copy()
         ),
         html.Div(
@@ -367,14 +370,92 @@ def update_data_param(
     #print(cur_param)
     return cur_param
 
+# @app.callback( #updating results dcc when button click
+#     Output('data-store-results', 'data'),
+#     [Input('run-btn', 'n_clicks')],
+#     [State('data-store-param', 'data')]
+# )
+# def compute_results(n_clicks, cur_params):
+#     Results_model = simulate_energysystem()
+#     return Results_model
+
 @app.callback( #updating results dcc when button click
-    Output('data-store-results', 'data'),
-    [Input('run-btn', 'n_clicks')],
-    [State('data-store-param', 'data')]
+    Output('kostenreduktion-input', 'value'),
+    [
+        Input('run-btn', 'n_clicks'),
+        # Input('data-store-results', 'data')
+    ]
 )
-def compute_results(n_clicks, cur_params):
-    Results_model = simulate_energysystem()
-    return Results_model
+def compute_kostenreduktion(cur_output):
+    answer = None
+    if cur_output is not None:
+        with open('result.json') as json_file:
+            data = json.load(json_file)
+
+        answer = data['kostenreduktion']
+
+        # answer = cur_output['kostenreduktion']
+
+    return answer
+
+
+@app.callback( #updating results dcc when button click
+    Output('amortizationsdauer-input', 'value'),
+    [
+        Input('run-btn', 'n_clicks'),
+        # Input('data-store-results', 'data')
+    ]
+)
+def compute_amortizationsdauer(cur_output):
+    answer = None
+    if cur_output is not None:
+        with open('result.json') as json_file:
+            data = json.load(json_file)
+
+        answer = data['amortizationsdauer']
+
+        # answer = cur_output['amortizationsdauer']
+
+    return answer
+
+@app.callback( #updating results dcc when button click
+    Output('speicherleistung-input', 'value'),
+    [
+        Input('run-btn', 'n_clicks'),
+        # Input('data-store-results', 'data')
+    ]
+)
+def compute_speicherleistung(cur_output):
+    answer = None
+    if cur_output is not None:
+        with open('result.json') as json_file:
+            data = json.load(json_file)
+
+        answer = data['speicherleistung']
+
+        # answer = cur_output['speicherleistung']
+
+    return answer
+
+
+@app.callback( #updating results dcc when button click
+    Output('speicherkapazität-input', 'value'),
+    [
+        Input('run-btn', 'n_clicks'),
+        # Input('data-store-results', 'data')
+    ]
+)
+def compute_speicherkapazität(cur_output):
+    answer = None
+    if cur_output is not None:
+        with open('result.json') as json_file:
+            data = json.load(json_file)
+
+        answer = data['speicherkapazität']
+
+        # answer = cur_output['speicherkapazität']
+
+    return answer
 
 if __name__ == '__main__':
     app.run_server(debug=True)
