@@ -34,32 +34,6 @@ def battery_opt(csv_data, param_batt):
     :return: 4 key values to be shown in tue app interface (listed below)
     """
 
-    #Parameters:
-        # 'Entladetiefe': 'cap_loss',
-        # 'Netztentgelt': '',
-        # 'Strom_cost': 'variable_costs_elect',
-        # 'Batteriespeicher': 'cost_bat',
-        # 'Kalkulationszinsatz': '',
-        # 'Leistung_cost': '',
-        # 'Kapazität': 'cap_max',
-        # 'Zeitraum': 'z_raum',
-        # 'Zyklenwirkungsgrad': 'effic',
-        # 'C-Rate': 'c_rate'
-    
-    # Return:
-        # 'kostenreduktion'
-        # 'amortizationsdauer'
-        # 'speicherleistung'
-        # 'speicherkapazität'
-
-
-    c_rate = 1/6
-    cap_max = 1000
-    cap_loss = 0.05
-    variable_costs_elect = 10
-    effic = 0.95
-    z_raum = 1/365
-
 
     # Default logger of oemof
     from oemof.tools import logger
@@ -73,7 +47,7 @@ def battery_opt(csv_data, param_batt):
 
     logging.info('Initialize the energy system')
     # 15min time period, for one year
-    number_of_time_steps = 4*24*1  # A day
+    number_of_time_steps = 4*24*1  # A day, to be changed in to a year
     date_time_index = pd.date_range(start='1/1/2018', periods=number_of_time_steps, freq='15min')
 
     energysystem = solph.EnergySystem(timeindex=date_time_index)
@@ -89,8 +63,9 @@ def battery_opt(csv_data, param_batt):
 
     # If the period is one year the equivalent periodical costs (epc) of an
     # investment are equal to the annuity. Use oemof's economic tools.
-    epc_storage = economics.annuity(capex=1000, n=20, wacc=0.05)
-
+    epc_storage_pow = economics.annuity(capex=param_batt['batt_pow_cost'], n=10, wacc=param_batt['interest_r'])
+    epc_storage_kap = economics.annuity(capex=param_batt['batt_kap_cost'], n=10, wacc=param_batt['interest_r'])
+    epc_grid = economics.annuity(capex=param_batt['variable_costs_elect'], n=20, wacc=param_batt['interest_r'])
     ##########################################################################
     # Create oemof objects
     ##########################################################################
@@ -101,11 +76,8 @@ def battery_opt(csv_data, param_batt):
     bel = solph.Bus(label="electricity")
 
     # create source object representing the natural gas commodity (annual limit)
-    elect_grid = solph.Source(label='net', outputs={bel: solph.Flow(variable_costs=param_batt['variable_costs_elect']
-                                                                    #, investment=solph.Investment(ep_costs=5000)
-                                                    )
-                                                    },
-                              investment=solph.Investment(ep_costs=epc_storage))
+    elect_grid = solph.Source(label='net', outputs={bel: solph.Flow(variable_costs=param_batt['powercost']) },
+                                                    investment=solph.Investment(ep_costs=epc_grid))
 
     # create simple sink object representing the electrical demand
     demand = solph.Sink(label='demand', inputs={bel: solph.Flow(
@@ -114,13 +86,14 @@ def battery_opt(csv_data, param_batt):
     # create storage object representing a battery
     storage = solph.components.GenericStorage(
         label='storage',
-        inputs={bel: solph.Flow(variable_costs=0.1)},
-        outputs={bel: solph.Flow()}, capacity_max =param_batt['cap_max'],
-        capacity_loss=param_batt['cap_loss'], initial_capacity=0,
+        inputs={bel: solph.Flow()},
+        outputs={bel: solph.Flow(investment=solph.Investment(ep_costs=epc_storage_pow),
+                                variable_costs=param_batt['batt_pow_cost'])},
+        capacity_loss=param_batt['cap_loss']/100, initial_capacity=0,
         invest_relation_input_capacity=param_batt['c_rate'],
         invest_relation_output_capacity=param_batt['c_rate'],
-        inflow_conversion_factor=1, outflow_conversion_factor=param_batt['effic'],
-        investment=solph.Investment(ep_costs=epc_storage),
+        inflow_conversion_factor=1, outflow_conversion_factor=param_batt['effic']/100,
+        investment=solph.Investment(ep_costs=epc_storage_kap),
     )
 
     energysystem.add(bel, elect_grid, demand, storage)
@@ -149,7 +122,7 @@ def battery_opt(csv_data, param_batt):
 
     k_redukt = 2179351 - meta_results['objective']
 
-    A_zeit = meta_results['objective']/(k_redukt/param_batt['z_raum'])
+    A_zeit = meta_results['objective']/(k_redukt/param_batt['period'])
 
     to_publish = {}
     to_publish['kostenreduktion']    = k_redukt

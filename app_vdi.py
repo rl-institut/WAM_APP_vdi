@@ -226,9 +226,9 @@ app.layout = html.Div(
                             className='app__section',
                             children=[
                                 html.Div('Investitionskosten'),
-                                html_param_input('Leistung_cost', 1000, 'kW'),
-                                html_param_input('Kapazität', 5000, 'kWh'),
-                                html_param_input('Zeitraum', 1, 'Jahre'),
+                                html_param_input('leistungbezogene', 175, 'euro/kW'),
+                                html_param_input('Kapazitaetbezogene', 237, 'euro/kWh'),
+                                html_param_input('Zeitraum', 10, 'Jahr'),
                             ]
                         )
                     ]
@@ -236,12 +236,11 @@ app.layout = html.Div(
                 html.Div(
                     id='param-capex-div',
                     className='app__section',
-                    title='Results description',
                     children=[
                         html.Div('Betriebskosten'),
-                        html_param_input('Netztentgelt', 87, 'Euro/(kW*Jahr)'),
+                        html_param_input('Leistungspreis', 87, 'Euro/kW ° a'),
                         html_param_input('Strom_cost', 0.1537, 'Euro/kWh'),
-                        html_param_input('Batteriespeicher', 1, 'Euro/(kW*Jahr)'),
+                        html_param_input('Batteriespeicher', 10, 'Euro/kW ° a'),
                         html_param_input('Kalkulationszinsatz', 7, '%'),
                     ]
                 ),
@@ -256,12 +255,12 @@ app.layout = html.Div(
 # the order in which they are given needs to remain unchanged.
 PARAM_LIST = [
     'Entladetiefe',
-    'Netztentgelt',
+    'Leistungspreis',
     'Strom_cost',
     'Batteriespeicher',
     'Kalkulationszinsatz',
-    'Leistung_cost',
-    'Kapazität',
+    'leistungbezogene',
+    'Kapazitaetbezogene',
     'Zeitraum',
     'Zyklenwirkungsgrad',
     'C-Rate',
@@ -270,13 +269,13 @@ PARAM_LIST = [
 # Name translation between App and Oemof-Model
 PARAM_DICT = {
     'Entladetiefe': 'cap_loss',
-    'Netztentgelt': 'f_1',
+    'Leistungspreis': 'powercost',
     'Strom_cost': 'variable_costs_elect',
     'Batteriespeicher': 'cost_bat',
-    'Kalkulationszinsatz': 'f_2',
-    'Leistung_cost': 'f_3',
-    'Kapazität': 'cap_max',
-    'Zeitraum': 'z_raum',
+    'Kalkulationszinsatz': 'interest_r',
+    'leistungbezogene': 'batt_pow_cost',
+    'Kapazitaetbezogene': 'batt_kap_cost',
+    'Zeitraum': 'period',
     'Zyklenwirkungsgrad': 'effic',
     'C-Rate': 'c_rate',
 }
@@ -305,12 +304,12 @@ def update_data_param(
         # param_id_list[Entladetiefe,...], filename, data (cur_param).
         contents,
         Entladetiefe,
-        Netztentgelt,
+        Leistungspreis,
         Strom_cost,
         Batteriespeicher,
         Kalkulationszinsatz,
-        Leistung_cost,
-        Kapazität,
+        leistungbezogene,
+        Kapazitaetbezogene,
         Zeitraum,
         Zyklenwirkungsgrad,
         CRate,
@@ -319,12 +318,12 @@ def update_data_param(
 ):
     param_value_list = [
         Entladetiefe,
-        Netztentgelt,
+        Leistungspreis,
         Strom_cost,
         Batteriespeicher,
         Kalkulationszinsatz,
-        Leistung_cost,
-        Kapazität,
+        leistungbezogene,
+        Kapazitaetbezogene,
         Zeitraum,
         Zyklenwirkungsgrad,
         CRate,
