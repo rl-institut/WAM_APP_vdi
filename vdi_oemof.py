@@ -1,5 +1,5 @@
 """
-General description
+Description
 -------------------
 
 Simple model  to asses the implementation of Batteries to reduced "peaks" in electric consume
@@ -24,7 +24,7 @@ Installation requirements
 -------------------------
 """
 
-def Battery_Opt(csv_data, param_batt):
+def battery_opt(csv_data, param_batt):
 
 
     """
@@ -79,11 +79,11 @@ def Battery_Opt(csv_data, param_batt):
     energysystem = solph.EnergySystem(timeindex=date_time_index)
 
     # Read data file
-    if isinstance(csv_data, str):
-        full_filename = os.path.join(os.path.dirname(__file__), csv_data)
-        data = pd.read_csv(full_filename, sep=",")
-    else:
-        data = csv_data
+    #if isinstance(csv_data, str):
+    full_filename = os.path.join(os.path.dirname(__file__), csv_data)
+    data = pd.read_csv(full_filename, sep=",")
+    #else:
+    #data = csv_data
 
     consumption_total = data['demand_el'].sum()
 
@@ -101,8 +101,10 @@ def Battery_Opt(csv_data, param_batt):
     bel = solph.Bus(label="electricity")
 
     # create source object representing the natural gas commodity (annual limit)
-    elect_grid = solph.Source(label='net', outputs={bel: solph.Flow(variable_costs=param_batt['variable_costs_elect'],
-                                                                    investment=solph.Investment(ep_costs=5000))},
+    elect_grid = solph.Source(label='net', outputs={bel: solph.Flow(variable_costs=param_batt['variable_costs_elect']
+                                                                    #, investment=solph.Investment(ep_costs=5000)
+                                                    )
+                                                    },
                               investment=solph.Investment(ep_costs=epc_storage))
 
     # create simple sink object representing the electrical demand
@@ -155,13 +157,14 @@ def Battery_Opt(csv_data, param_batt):
     to_publish['speicherleistung']   = results[(storage, bel)]['sequences']['flow'].max()
     to_publish['speicherkapazität']  = results[(storage, None)]['sequences']['capacity'].max()
 
-    pp.pprint(to_publish)
+    # pp.pprint(to_publish)
 
     import json
-    with open('result.json', 'w') as fp:
-        json.dump(to_publish, fp)
+    # with open('result.json', 'w') as rpp:
+    #     json.dump(to_publish, rpp)
 
+    return to_publish
 
 if __name__ == "__main__":
 
-    Battery_Opt()
+    battery_opt()

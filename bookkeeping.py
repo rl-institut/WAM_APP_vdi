@@ -1,22 +1,24 @@
 import multiprocessing as mp
-from vdi_oemof import Battery_Opt
+from vdi_oemof import battery_opt
 
 
-def simulate_energysystem(time_series, param_batt, **kwargs):
-    simulation_batt = Battery_Opt
-    results, parameters = multiprocess_energysystem(
-       time_series, param_batt,
-        simulation_batt)
-    return results, parameters
+def simulate_energysystem(input_app):#time_series, param_batt, **kwargs):
+    simulation_batt = battery_opt
+    results=multiprocess_energysystem(
+    #, parameters = multiprocess_energysystem(
+    #time_series, param_batt
+        input_app, simulation_batt)
+    return results
 
 
-def multiprocess_energysystem(time_series, param_batt,simulation_batt, **kwargs):
+def multiprocess_energysystem(input_app, model):#time_series, param_batt,simulation_batt, **kwargs):
     queue = mp.Queue()
     p = mp.Process(
         target=queue_energysystem,
         args=(queue,
-              time_series, param_batt,
-              simulation_batt)
+              input_app, model)
+#              time_series, param_batt,
+#             simulation_batt)
     )
     p.start()
     results = queue.get()
@@ -24,9 +26,9 @@ def multiprocess_energysystem(time_series, param_batt,simulation_batt, **kwargs)
     return results
 
 
-def queue_energysystem(queue, time_series, param_batt, simulation_batt, **kwargs):
+def queue_energysystem(queue, input_app, model, **kwargs):
     """
     All function in simulation_batt are succesively run on energysystem
     """
-    results = simulation_batt(time_series, param_batt)
+    results = model(input_app['csv_name'], input_app['params'])
     queue.put(results)
