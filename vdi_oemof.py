@@ -124,6 +124,8 @@ def battery_opt(csv_data, param_batt):
     # The meta_results are printed to check the behaviour of the model
     pp.pprint(meta_results)
 
+    pp.pprint(results)
+
     k_redukt = 2179351 - meta_results['objective']
 
     A_zeit = meta_results['objective']/(k_redukt/param_batt['inv_period'])
@@ -133,7 +135,6 @@ def battery_opt(csv_data, param_batt):
     to_publish['amortizationsdauer'] = A_zeit
     to_publish['speicherleistung']   = results[(storage, bel)]['sequences']['flow'].max()
     to_publish['speicherkapazität']  = results[(storage, None)]['sequences']['capacity'].max()
-
 
     return to_publish
 

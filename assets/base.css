@@ -1,33 +1,13 @@
-.app {
-    font-family: 'Open Sans', sans-serif;
-    padding: 5px;
-    height: calc(100vh - 65px);
-    display: flex;
-    flex-direction: column;
-}
 
-.app__container {
-    height: 50%;
-    padding: 5px;
-    border: solid 1px #E8F0F9;
-    border-radius:4px;
-    display: flex;
-    flex-direction: row;
-}
-
-.app__section {
-    border: solid 1px #E8F0F9;
-    border-radius:4px;
-}
 
 
 .app__input {
-    border: solid 2px #E8F0F9;
+    border: solid 2px;
     display: flex;
     flex-direction: row;
     align-items: center;
-    padding-top: 10px;
-    padding-bottom: 10px;
+    padding-top: 6px;
+    padding-bottom: 4px;
 }
 
 .app__output {
@@ -38,3 +18,13 @@
     padding-top: 10px;
     padding-bottom: 10px;
 }
+
+# input-div div {
+ border: solid 2px red;
+ margin: 10px;
+}
+
+# output-div div {
+ border: solid 2px green;
+ margin: 10px;
+ }

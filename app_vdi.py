@@ -15,6 +15,13 @@ from bookkeeping import simulate_energysystem
 # Initializes dash app
 app = dash.Dash(__name__)
 
+# Load css file
+external_css = [
+    'https://raw.githack.com/rl-institut/WAM/dev/static/foundation/css/app.css',
+]
+for css in external_css:
+    app.css.append_css({"external_url": css})
+
 app.title = 'vdi visualisation'
 
 VDI_RESULTS = {
@@ -106,9 +113,9 @@ def parse_upload_contents(contents):
     df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
     return df.to_json()
 
+
 app.layout = html.Div(
-    id='app-div',
-    className='app',
+    className='grid-y medium-grid-frame',
     children=[
         dcc.Store(
             id='data-store-results',
@@ -121,114 +128,168 @@ app.layout = html.Div(
             data=VDI_PARAM.copy()
         ),
         html.Div(
-            id='top-panel-div',
-            className='app__container',
+            id='header-div',
+            className='cell large- shrink header',
             children=[
                 html.Div(
-                    id='timeseries-div',
-                    className='app__timeseries',
-                    title='Hover description',
-                    children=dcc.Graph(
-                        id='timeseries-plot',
-                        figure=go.Figure(data=[go.Scatter(x=[],
-                                                          y=[],
-                                                          mode='markers',)
-                                               ]
-                                         ),
-                        style={'width': '70%', 'height': '90%'}
-                    ),
-                ),
-                html.Div(
-                    id='load-data-div',
-                    className='app__load_data',
-                    title='Hover description',
+                    id='header-content',
+                    className='grid-x grid-margin-x',
                     children=[
-                        dcc.Upload(
-                            id='load-data',
-                            className='app__upload',
-                            children=html.Div([
-                                'Drag and Drop or ',
-                                html.A('Select Files')
-                            ]),
-                            multiple=False,
-                            style={
-                                'width': '100%',
-                                'height': '60px',
-                                'lineHeight': '60px',
-                                'borderWidth': '1px',
-                                'borderStyle': 'dashed',
-                                'borderRadius': '5px',
-                                'textAlign': 'center',
-                                'margin': '10px'
-                            },
+                        html.Div(
+                            className='cell small-4 text-justify',
+                            children='Title'
                         ),
-                        html.Button(
-                            id='run-btn',
-                            className='app__button',
-                            children='Run now'
-                        )
-                    ]
-                ),
-                html.Div(
-                    id='results-div',
-                    className='app__section',
-                    title='Results Model',
-                    children=[
-                        html.Div('Ergebnisse'),
-                        html_param_output('Kostenreduktion', 0, 'Euro'),
-                        html_param_output('Amortizationsdauer', 0, 'Jahre'),
-                        html_param_output('Speicherleistung', 0, 'kW'),
-                        html_param_output('Speicherkapazität', 0, 'kWh'),
+                        html.Div(
+                            className='cell small-8 text-justify',
+                            children='Subtitle',
+                        ),
                     ]
                 ),
             ]
         ),
         html.Div(
-            id='bottom-panel-div',
-            className='app__container',
+            id='page-div',
+            className='cell medium-10',
             children=[
                 html.Div(
-                    id='parameters-div',
-                    className='app__parameters',
-                    title='Parameters description',
+                    id='app-div',
+                    className='grid-y',
                     children=[
                         html.Div(
-                            id='param-tech-div',
-                            className='app__section',
+                            className='cell large-7',
                             children=[
-                                html.Div('Technische Parameter'),
-                                html_param_input('Zyklenwirkungsgrad', 76.6, '%'),
-                                html_param_input('Entladetiefe', 37, '%'),
-                                html_param_input('C-Rate', 0.5),
+                                html.Div(
+                                    className='grid-x',
+                                    children=[
+                                        html.Div(
+                                            id='timeseries-div',
+                                            className='cell large-9',
+                                            title='Hover description',
+                                            children=dcc.Graph(
+                                                id='timeseries-plot',
+                                                figure=go.Figure(
+                                                    data=[
+                                                        go.Scatter(
+                                                            x=[],
+                                                            y=[],
+                                                            mode='markers'
+                                                        )
+                                                    ]
+                                                ),
+                                                # style={'width': '70%', 'height': '90%'}
+                                            ),
+                                        ),
+                                        html.Div(
+                                            id='load-data-div',
+                                            className='cell large-3',
+                                            title='Hover description',
+                                            children=[
+                                                dcc.Upload(
+                                                    id='load-data',
+                                                    className='app__upload',
+                                                    children=html.Div([
+                                                        'Drag and Drop or ',
+                                                        html.A('Select Files')
+                                                    ]),
+                                                    multiple=False,
+                                                    style={
+                                                        'width': '100%',
+                                                        'height': '60px',
+                                                        'lineHeight': '60px',
+                                                        'borderWidth': '1px',
+                                                        'borderStyle': 'dashed',
+                                                        'borderRadius': '5px',
+                                                        'textAlign': 'center',
+                                                        'margin': '10px'
+                                                    },
+                                                ),
+                                                html.Button(
+                                                    id='run-btn',
+                                                    className='app__button',
+                                                    children='Run now'
+                                                )
+                                            ]
+                                        )
+                                    ]
+                                )
                             ]
                         ),
                         html.Div(
-                            id='param-opex-div',
-                            className='app__section',
+                            className='cell large-5',
                             children=[
-                                html.Div('Investitionskosten'),
-                                html_param_input('leistungbezogene', 175, 'euro/kW'),
-                                html_param_input('Kapazitaetbezogene', 237, 'euro/kWh'),
-                                html_param_input('Zeitraum', 10, 'Jahr'),
-                                html_param_input('Kalkulationszinsatz', 7, '%'),
+                                html.Div(
+                                    id='input div',
+                                    className='grid-x',
+                                    children=[
+                                        html.Div(
+                                            id='param-tech-div',
+                                            className='cell auto',
+                                            children=[
+                                                html.Div('Technische Parameter'),
+                                                html_param_input('Zyklenwirkungsgrad', 76.6, '%'),
+                                                html_param_input('Entladetiefe', 37, '%'),
+                                                html_param_input('C-Rate', 0.5),
+                                            ]
+                                        ),
+                                        html.Div(
+                                            id='param-opex-div',
+                                            className='cell auto',
+                                            children=[
+                                                html.Div('Investitionskosten'),
+                                                html_param_input('leistungbezogene', 175, 'euro/kW'),
+                                                html_param_input('Kapazitaetbezogene', 237, 'euro/kWh'),
+                                                html_param_input('Zeitraum', 10, 'Jahr'),
+                                                html_param_input('Kalkulationszinsatz', 7, '%'),
+                                            ]
+                                        ),
+                                        html.Div(
+                                            id='param-capex-div',
+                                            className='cell auto',
+                                            children=[
+                                                html.Div('Betriebskosten'),
+                                                html_param_input('Leistungspreis', 87, 'Euro/kW ° a'),
+                                                html_param_input('Stromkosten', 0.1537, 'Euro/kWh'),
+                                                html_param_input('Speichernkosten', 10, 'Euro/kW ° a'),
+                                            ]
+                                        ),
+                                    ]
+                                ),
+                                html.Div(
+                                    id='output-div',
+                                    className='grid-x',
+                                    children=[
+                                        html.Div(
+                                            className='cell auto',
+                                            title='Results Model',
+                                            children=[
+                                                html.Div('Ergebnisse'),
+                                                html_param_output('Kostenreduktion', 0, 'Euro'),
+                                                html_param_output('Amortizationsdauer', 0, 'Jahre'),
+                                                html_param_output('Speicherleistung', 0, 'kW'),
+                                                html_param_output('Speicherkapazität', 0, 'kWh'),
+                                            ]
+                                        )
+                                    ]
+                                )
                             ]
                         )
                     ]
                 ),
-                html.Div(
-                    id='param-capex-div',
-                    className='app__section',
-                    children=[
-                        html.Div('Betriebskosten'),
-                        html_param_input('Leistungspreis', 87, 'Euro/kW ° a'),
-                        html_param_input('Stromkosten', 0.1537, 'Euro/kWh'),
-                        html_param_input('Speichernkosten', 10, 'Euro/kW ° a'),
-                    ]
-                ),
+                # html.Div(
+                #     id='footer-div',
+                #     className='cell shrink footer',
+                #     children=[
+                #         html.Div(
+                #             id='footer-content',
+                #             className='grid-x grid-margin-x',
+                #             children=['LOGOs LOGO IMPRESSUM']
+                #
+                #         )
+                #     ]
+                # ),
             ]
-
         )
-    ],
+    ]
 )
 
 # List of parameters to be read from the App interface and handled to the Oemof-Model
@@ -270,7 +331,7 @@ param_id_list = [
 @app.callback( #updating dcc param when a inputs are modified or timeseries is loaded
     Output('data-store-param', 'data'),
     [  # The uploading of the time series and the modification of a parameter
-       # are defined as triggers (and arguments).
+        # are defined as triggers (and arguments).
         Input('load-data', 'contents')
     ] + param_id_list,
     [   # The filename collected with for the time series and the previous data
@@ -340,7 +401,7 @@ def compute_results(n_clicks, cur_param_data, cur_res_data):
 @app.callback( #updating Result inputs when results dcc changes (kostenreduktion)
     Output('kostenreduktion-input', 'value'),
     [
-         Input('data-store-results', 'data')
+        Input('data-store-results', 'data')
     ]
 )
 def compute_kostenreduktion(cur_output):
@@ -355,7 +416,7 @@ def compute_kostenreduktion(cur_output):
 @app.callback( #updating Result inputs when results dcc changes (amortizationsdauer)
     Output('amortizationsdauer-input', 'value'),
     [
-         Input('data-store-results', 'data')
+        Input('data-store-results', 'data')
     ]
 )
 def compute_amortizationsdauer(cur_output):
@@ -369,7 +430,7 @@ def compute_amortizationsdauer(cur_output):
 @app.callback( #updating Result inputs when results dcc changes (speicherleistung)
     Output('speicherleistung-input', 'value'),
     [
-         Input('data-store-results', 'data')
+        Input('data-store-results', 'data')
     ]
 )
 def compute_speicherleistung(cur_output):
@@ -383,7 +444,7 @@ def compute_speicherleistung(cur_output):
 @app.callback( #updating Result inputs when results dcc changes (speicherkapazität)
     Output('speicherkapazität-input', 'value'),
     [
-         Input('data-store-results', 'data')
+        Input('data-store-results', 'data')
     ]
 )
 def compute_speicherkapazität(cur_output):
@@ -410,8 +471,8 @@ def update_graph(cur_data, fig):
         df = pd.read_json(cur_data['csv_data'])
         fig['data'][0].update(
             {
-              'x': df.timestep,
-              'y': df.demand_el,
+                'x': df.timestep,
+                'y': df.demand_el,
             }
         )
     return fig
