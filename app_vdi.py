@@ -164,7 +164,7 @@ app.layout = html.Div(
                                         html.Div(
                                             id='timeseries-div',
                                             className='cell large-9',
-                                            title='Hover description',
+                                            title='electrical demand',
                                             children=dcc.Graph(
                                                 id='timeseries-plot',
                                                 figure=go.Figure(
@@ -176,13 +176,12 @@ app.layout = html.Div(
                                                         )
                                                     ]
                                                 ),
-                                                # style={'width': '70%', 'height': '90%'}
                                             ),
                                         ),
                                         html.Div(
                                             id='load-data-div',
                                             className='cell large-3',
-                                            title='Hover description',
+                                            title='Here should be load the data series file (electric demand)',
                                             children=[
                                                 dcc.Upload(
                                                     id='load-data',

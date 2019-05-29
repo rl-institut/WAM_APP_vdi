@@ -45,8 +45,10 @@ def battery_opt(csv_data, param_batt):
     # Configure timeseries, read consume data and precalculate
     ##########################################################################
     logging.info('Initialize the energy system and precalculate')
+
+    # Time series configuration. NEEDS TO BE MANUALLY CHANGED ACCORDING TO THE AMOUNT OF DATA GIVEN
     # 15min time period, for one year
-    number_of_time_steps = 4*24*1  # A day, to be changed in to a year
+    number_of_time_steps = 4*24*365
     date_time_index = pd.date_range(start='1/1/2018', periods=number_of_time_steps, freq='15min')
 
     energysystem = solph.EnergySystem(timeindex=date_time_index)
@@ -70,7 +72,7 @@ def battery_opt(csv_data, param_batt):
     # Now all respective annuities, for each investment or specific yearly, cost is calculated
     epc_storage_cap = economics.annuity(capex=capex_capacity, n=lifetime, wacc=wacc)
     epc_storage_pow = economics.annuity(capex=capex_power, n=lifetime, wacc=wacc)
-    epc_grid = economics.annuity(capex=capex_grid, n=lifetime, wacc=wacc)
+    epc_grid = capex_grid
 
     ##########################################################################
     # Create Components and add them to the energy system
@@ -118,21 +120,31 @@ def battery_opt(csv_data, param_batt):
     ##########################################################################
     # Check and plot the results
     ##########################################################################
-
     results = processing.results(om)
     meta_results = processing.meta_results(om)
+
     # The meta_results are printed to check the behaviour of the model
     pp.pprint(meta_results)
 
-    pp.pprint(results)
+    # Comparison between the peak consumption before and after the Storage
+    pmax_before = results[(elect_grid, bel)]['sequences']['flow'].max()
+    pmax_after  = data['demand_el'].max()
 
-    k_redukt = 2179351 - meta_results['objective']
+    print('Pmax before =',pmax_before, 'kW')
 
-    A_zeit = meta_results['objective']/(k_redukt/param_batt['inv_period'])
+    print('Pmax after =',pmax_after, 'kW')
+
+    cost_reduct = (pmax_before - pmax_after)*param_batt['powercost']
+
+    if cost_reduct==0:
+        amort_time = 'No investment is recomended'
+        cost_reduct = 'No investment is recomended'
+    else:
+        amort_time = meta_results['objective'] / cost_reduct
 
     to_publish = {}
-    to_publish['kostenreduktion']    = k_redukt
-    to_publish['amortizationsdauer'] = A_zeit
+    to_publish['kostenreduktion']    = cost_reduct
+    to_publish['amortizationsdauer'] = amort_time
     to_publish['speicherleistung']   = results[(storage, bel)]['sequences']['flow'].max()
     to_publish['speicherkapazität']  = results[(storage, None)]['sequences']['capacity'].max()
 
