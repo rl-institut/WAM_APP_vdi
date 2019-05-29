@@ -7,7 +7,6 @@ import dash
 from dash.dependencies import Output, Input, State
 import dash_core_components as dcc
 import dash_html_components as html
-import plotly.plotly as py
 import plotly.graph_objs as go
 import pprint as pp
 from bookkeeping import simulate_energysystem
@@ -101,27 +100,9 @@ def html_param_input(p_name, p_value=0., p_unit='', **kwargs):
         ]
     )
 
-# def parse_upload_contents(contents, filename):
-#     content_type, content_string = contents.split(',')
-#     decoded = base64.b64decode(content_string)
-#     df = pd.DataFrame()
-#     try:
-#         if 'csv' in filename:
-#             # Assume that the user uploaded a CSV file
-#             df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
-#         elif 'xls' in filename:
-#             # Assume that the user uploaded an excel file
-#             df = pd.read_excel(io.BytesIO(decoded))
-#     except Exception as e:
-#         print(e)
-#
-#     return df.to_json()
-
 def parse_upload_contents(contents):
     content_type, content_string = contents.split(',')
     decoded = base64.b64decode(content_string)
-    #df = pd.DataFrame()
-    # Assume that the user uploaded a CSV file
     df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
     return df.to_json()
 
@@ -229,6 +210,7 @@ app.layout = html.Div(
                                 html_param_input('leistungbezogene', 175, 'euro/kW'),
                                 html_param_input('Kapazitaetbezogene', 237, 'euro/kWh'),
                                 html_param_input('Zeitraum', 10, 'Jahr'),
+                                html_param_input('Kalkulationszinsatz', 7, '%'),
                             ]
                         )
                     ]
@@ -239,9 +221,8 @@ app.layout = html.Div(
                     children=[
                         html.Div('Betriebskosten'),
                         html_param_input('Leistungspreis', 87, 'Euro/kW ° a'),
-                        html_param_input('Strom_cost', 0.1537, 'Euro/kWh'),
-                        html_param_input('Batteriespeicher', 10, 'Euro/kW ° a'),
-                        html_param_input('Kalkulationszinsatz', 7, '%'),
+                        html_param_input('Stromkosten', 0.1537, 'Euro/kWh'),
+                        html_param_input('Speichernkosten', 10, 'Euro/kW ° a'),
                     ]
                 ),
             ]
@@ -256,8 +237,8 @@ app.layout = html.Div(
 PARAM_LIST = [
     'Entladetiefe',
     'Leistungspreis',
-    'Strom_cost',
-    'Batteriespeicher',
+    'Stromkosten',
+    'Speichernkosten',
     'Kalkulationszinsatz',
     'leistungbezogene',
     'Kapazitaetbezogene',
@@ -268,14 +249,14 @@ PARAM_LIST = [
 
 # Name translation between App and Oemof-Model
 PARAM_DICT = {
-    'Entladetiefe': 'cap_loss',
+    'Entladetiefe': 'capmin',
     'Leistungspreis': 'powercost',
-    'Strom_cost': 'variable_costs_elect',
-    'Batteriespeicher': 'cost_bat',
+    'Stromkosten': 'electcost',
+    'Speichernkosten': 'batt_betrieb',
     'Kalkulationszinsatz': 'interest_r',
     'leistungbezogene': 'batt_pow_cost',
-    'Kapazitaetbezogene': 'batt_kap_cost',
-    'Zeitraum': 'period',
+    'Kapazitaetbezogene': 'batt_cap_cost',
+    'Zeitraum': 'inv_period',
     'Zyklenwirkungsgrad': 'effic',
     'C-Rate': 'c_rate',
 }
@@ -305,8 +286,8 @@ def update_data_param(
         contents,
         Entladetiefe,
         Leistungspreis,
-        Strom_cost,
-        Batteriespeicher,
+        Stromkosten,
+        Speichernkosten,
         Kalkulationszinsatz,
         leistungbezogene,
         Kapazitaetbezogene,
@@ -319,8 +300,8 @@ def update_data_param(
     param_value_list = [
         Entladetiefe,
         Leistungspreis,
-        Strom_cost,
-        Batteriespeicher,
+        Stromkosten,
+        Speichernkosten,
         Kalkulationszinsatz,
         leistungbezogene,
         Kapazitaetbezogene,
@@ -335,9 +316,8 @@ def update_data_param(
     for p, n in zip(param_value_list, PARAM_LIST):
         if p is not None:
             cur_param['params'].update({PARAM_DICT[n]: p})
-    #print(contents)
+
     if contents is not None:
-       # cur_param.update({'csv_data':  parse_upload_contents(contents, filenames)})
         cur_param.update({'csv_data': parse_upload_contents(contents)})
         cur_param.update({'csv_name': filenames})
     return cur_param
@@ -352,24 +332,20 @@ def update_data_param(
 )
 def compute_results(n_clicks, cur_param_data, cur_res_data):
     if n_clicks is not None:
-       # print(pd.read_json(cur_param_data['csv_data']))
-        results_model = simulate_energysystem(cur_param_data)#['csv_name'], cur_param_data['params'])
-        print(cur_param_data['params'], results_model)
+        results_model = simulate_energysystem(cur_param_data)
+
         cur_res_data.update(results_model)
     return cur_res_data
 
 @app.callback( #updating Result inputs when results dcc changes (kostenreduktion)
     Output('kostenreduktion-input', 'value'),
     [
-        #Input('run-btn', 'n_clicks'),
          Input('data-store-results', 'data')
     ]
 )
 def compute_kostenreduktion(cur_output):
     answer = None
     if cur_output is not None:
-        # with open('result.json') as json_file:
-        #     data = json.load(json_file)
 
         answer = cur_output.get('kostenreduktion')
 
@@ -379,57 +355,42 @@ def compute_kostenreduktion(cur_output):
 @app.callback( #updating Result inputs when results dcc changes (amortizationsdauer)
     Output('amortizationsdauer-input', 'value'),
     [
-        #Input('run-btn', 'n_clicks'),
          Input('data-store-results', 'data')
     ]
 )
 def compute_amortizationsdauer(cur_output):
     answer = None
     if cur_output is not None:
-        # with open('result.json') as json_file:
-        #     data = json.load(json_file)
 
         answer = cur_output.get('amortizationsdauer')
-
-        # answer = cur_output['amortizationsdauer']
 
     return answer
 
 @app.callback( #updating Result inputs when results dcc changes (speicherleistung)
     Output('speicherleistung-input', 'value'),
     [
-        #Input('run-btn', 'n_clicks'),
          Input('data-store-results', 'data')
     ]
 )
 def compute_speicherleistung(cur_output):
     answer = None
     if cur_output is not None:
-        # with open('result.json') as json_file:
-        #     data = json.load(json_file)
 
         answer = cur_output.get('speicherleistung')
-
-        # answer = cur_output.get('speicherleistung')
 
     return answer
 
 @app.callback( #updating Result inputs when results dcc changes (speicherkapazität)
     Output('speicherkapazität-input', 'value'),
     [
-        #Input('run-btn', 'n_clicks'),
          Input('data-store-results', 'data')
     ]
 )
 def compute_speicherkapazität(cur_output):
     answer = None
     if cur_output is not None:
-        # with open('result.json') as json_file:
-        #     data = json.load(json_file)
 
         answer = cur_output.get('speicherkapazität')
-
-        # answer = cur_output.get('speicherkapazität')
 
     return answer
 
@@ -439,7 +400,7 @@ def compute_speicherkapazität(cur_output):
     [State('timeseries-plot', 'figure')]
 )
 def update_graph(cur_data, fig):
-    #print(cur_data)
+
     if cur_data is not None:
         data = cur_data.get('csv_data')
     else:
@@ -447,15 +408,10 @@ def update_graph(cur_data, fig):
 
     if data is not None:
         df = pd.read_json(cur_data['csv_data'])
-        #pp.pprint(df)
-        #y = np.squeeze(df.values)
-        #x = [n * 0.25 for n in range(len(y))]
         fig['data'][0].update(
             {
               'x': df.timestep,
               'y': df.demand_el,
-              #  data = [go.Scatter(x=df['timestep'], y=df['demand_el'])]
-              #  py.iplot(data, filename='pandas-time-series')
             }
         )
     return fig
